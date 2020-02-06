@@ -17,9 +17,13 @@ public class VerticalLayoutGroupCycle : HorizontalOrVerticalLayoutGroupCycle
     {
         m_NormalizedPosition = reversed ? normalizedPosition : Vector2.one - normalizedPosition;
 
-        SetChildrenAlongAxisCycle(0, true, true);
+        // there are chances that capacity and m_CellInfoMap.Length doesn't match when changing capacity frequently in editor.
+        if (capacity == m_CellInfoMap.Length)
+        {
+            SetChildrenAlongAxisCycle(0, true, true);
 
-        SetChildrenAlongAxisCycle(1, true, true);
+            SetChildrenAlongAxisCycle(1, true, true);
+        }
     }
 
     [ContextMenu("Reset Position")]
@@ -45,11 +49,13 @@ public class VerticalLayoutGroupCycle : HorizontalOrVerticalLayoutGroupCycle
 
     public override void SetLayoutHorizontal()
     {
+        CalcCellAlongAxisCycle(0, true);
         SetChildrenAlongAxisCycle(0, true);
     }
 
     public override void SetLayoutVertical()
     {
+        CalcCellAlongAxisCycle(1, true);
         SetChildrenAlongAxisCycle(1, true);
     }
 }
