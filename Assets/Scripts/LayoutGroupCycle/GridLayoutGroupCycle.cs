@@ -80,9 +80,12 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
     {
         m_StartIndex = -1;
 
-        for (var i = 0; i < m_ChildIndexMap.Length; ++i)
+        if (m_ChildIndexMap != null)
         {
-            m_ChildIndexMap[i] = -1;
+            for (var i = 0; i < m_ChildIndexMap.Length; ++i)
+            {
+                m_ChildIndexMap[i] = -1;
+            }
         }
 
         SetDirty();

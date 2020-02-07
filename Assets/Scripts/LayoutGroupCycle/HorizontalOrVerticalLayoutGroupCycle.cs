@@ -71,9 +71,12 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
     {
         m_StartIndex = -1;
 
-        for (var i = 0; i < m_ChildIndexMap.Length; ++i)
+        if (m_ChildIndexMap != null)
         {
-            m_ChildIndexMap[i] = -1;
+            for (var i = 0; i < m_ChildIndexMap.Length; ++i)
+            {
+                m_ChildIndexMap[i] = -1;
+            }
         }
 
         SetDirty();
@@ -195,7 +198,6 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
 
     protected void CalcCellAlongAxisCycle(int axis, bool isVertical)
     {
-        // TDDO: reversed doesn't work currently.
         float size = rectTransform.rect.size[axis];
         bool useScale = (axis == 0 ? m_ChildScaleWidth : m_ChildScaleHeight);
 
@@ -233,10 +235,11 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
 
             for (int i = 0; i < capacity; i++)
             {
-                m_CellInfoMap[i].size[axis] = Mathf.Lerp(m_CellInfoMap[i].min[axis], m_CellInfoMap[i].preferred[axis], minMaxLerp);
-                m_CellInfoMap[i].size[axis] += m_CellInfoMap[i].flexible[axis] * itemFlexibleMultiplier;
-                m_CellInfoMap[i].pos[axis] = pos;
-                pos += m_CellInfoMap[i].size[axis] * (useScale ? m_CellInfoMap[i].scale[axis] : 1.0f) + spacing;
+                var index = reversed ? capacity - 1 - i : i;
+                m_CellInfoMap[index].size[axis] = Mathf.Lerp(m_CellInfoMap[index].min[axis], m_CellInfoMap[index].preferred[axis], minMaxLerp);
+                m_CellInfoMap[index].size[axis] += m_CellInfoMap[index].flexible[axis] * itemFlexibleMultiplier;
+                m_CellInfoMap[index].pos[axis] = pos;
+                pos += m_CellInfoMap[index].size[axis] * (useScale ? m_CellInfoMap[index].scale[axis] : 1.0f) + spacing;
             }
         }
     }
@@ -263,18 +266,32 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
 
         var scrollAxis = isVertical ? 1 : 0;
         float currentOffset = scrollSize * m_NormalizedPosition[scrollAxis];
+        if (reversed)
+        {
+            currentOffset = size - currentOffset;
+        }
 
         int newStartIndex = Mathf.Max(0, (int)capacity - 1);
-        for (; newStartIndex > 0; --newStartIndex)
+        if (reversed)
         {
-            if (newStartIndex < 0 || newStartIndex >= m_CellInfoMap.Length)
+            for (; newStartIndex > 0; --newStartIndex)
             {
-                Debug.LogWarning("Index out of range");
+                // TODO: scale should be take into consideration
+                if (m_CellInfoMap[newStartIndex].pos[scrollAxis] + m_CellInfoMap[newStartIndex].size[scrollAxis] >= currentOffset)
+                {
+                    break;
+                }
             }
-
-            if (m_CellInfoMap[newStartIndex].pos[scrollAxis] <= currentOffset)
+        }
+        else
+        {
+            for (; newStartIndex > 0; --newStartIndex)
             {
-                break;
+                // TODO: scale should be take into consideration
+                if (m_CellInfoMap[newStartIndex].pos[scrollAxis] <= currentOffset)
+                {
+                    break;
+                }
             }
         }
 
