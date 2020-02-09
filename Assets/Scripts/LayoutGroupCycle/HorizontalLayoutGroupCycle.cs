@@ -15,7 +15,7 @@ public class HorizontalLayoutGroupCycle : HorizontalOrVerticalLayoutGroupCycle
 
     protected override void OnScrolling(Vector2 normalizedPosition)
     {
-        m_NormalizedPosition = reversed ? Vector2.one - normalizedPosition : normalizedPosition;
+        m_NormalizedPosition = normalizedPosition;
 
         // there are chances that capacity and m_CellInfoMap.Length doesn't match when changing capacity frequently in editor.
         if (capacity == m_CellInfoMap.Length)
@@ -43,19 +43,17 @@ public class HorizontalLayoutGroupCycle : HorizontalOrVerticalLayoutGroupCycle
             var contentSize = rectTransform.rect.size[0];
             var viewSize = scrollRect.viewport.rect.size[0];
             var scrollSize = Mathf.Max(0, contentSize - viewSize);
-            var viewMin = m_ScrollRect.normalizedPosition[0] * scrollSize;
+            var viewMin = m_NormalizedPosition[0] * scrollSize;
             var viewMax = viewMin + viewSize;
             var cellInfo = m_CellInfoMap[index];
 
             if (cellInfo.pos[0] < viewMin)
             {
-                var normalizedPosition = cellInfo.pos[0] / scrollSize;
-                scrollRect.horizontalNormalizedPosition = normalizedPosition;
+                scrollRect.horizontalNormalizedPosition = cellInfo.pos[0] / scrollSize;
             }
             else if (cellInfo.pos[0] + cellInfo.size[0] > viewMax)
             {
-                var normalizedPosition = (cellInfo.pos[0] + cellInfo.size[0] - viewSize) / scrollSize;
-                scrollRect.horizontalNormalizedPosition = normalizedPosition;
+                scrollRect.horizontalNormalizedPosition = (cellInfo.pos[0] + cellInfo.size[0] - viewSize) / scrollSize;
             }
         }
     }

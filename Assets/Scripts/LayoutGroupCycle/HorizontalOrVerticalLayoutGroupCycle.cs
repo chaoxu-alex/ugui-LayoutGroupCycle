@@ -266,7 +266,7 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
         float scrollSize = Mathf.Max(0, size - viewSize);
 
         var scrollAxis = isVertical ? 1 : 0;
-        float currentOffset = scrollSize * m_NormalizedPosition[scrollAxis];
+        float currentOffset = scrollSize * (reversed ? 1 - m_NormalizedPosition[scrollAxis] : m_NormalizedPosition[scrollAxis]);
         if (reversed)
         {
             currentOffset = size - currentOffset;
