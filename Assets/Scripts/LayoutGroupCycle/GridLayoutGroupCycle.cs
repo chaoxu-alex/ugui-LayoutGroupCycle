@@ -92,7 +92,7 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
     }
 
     [ContextMenu("Reset Position")]
-    public virtual void ResetPosition()
+    public void ResetPosition()
     {
         if (scrollRect != null)
         {
@@ -110,6 +110,11 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
                 scrollRect.verticalNormalizedPosition = cornerY == 1 ? 0.0f : 1.0f;
             }
         }
+    }
+
+    public void Locate(uint index)
+    {
+        
     }
 
     public override void CalculateLayoutInputHorizontal()

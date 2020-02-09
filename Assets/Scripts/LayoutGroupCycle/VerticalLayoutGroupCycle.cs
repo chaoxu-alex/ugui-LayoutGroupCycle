@@ -2,7 +2,7 @@
 
 public class VerticalLayoutGroupCycle : HorizontalOrVerticalLayoutGroupCycle
 {
-    protected VerticalLayoutGroupCycle() {}
+    protected VerticalLayoutGroupCycle() { }
 
     protected override void Start()
     {
@@ -33,6 +33,30 @@ public class VerticalLayoutGroupCycle : HorizontalOrVerticalLayoutGroupCycle
         {
             scrollRect.StopMovement();
             scrollRect.verticalNormalizedPosition = reversed ? 0.0f : 1.0f;
+        }
+    }
+
+    public override void Locate(uint index)
+    {
+        if (m_CellInfoMap != null && 0 <= index && index < m_CellInfoMap.Length)
+        {
+            var contentSize = rectTransform.rect.size[1];
+            var viewSize = scrollRect.viewport.rect.size[1];
+            var scrollSize = Mathf.Max(0, contentSize - viewSize);
+            var viewMin = (1 - m_ScrollRect.normalizedPosition[1]) * scrollSize;
+            var viewMax = viewMin + viewSize;
+            var cellInfo = m_CellInfoMap[index];
+
+            if (cellInfo.pos[1] < viewMin)
+            {
+                var normalizedPosition = cellInfo.pos[1] / scrollSize;
+                scrollRect.verticalNormalizedPosition = 1 - normalizedPosition;
+            }
+            else if (cellInfo.pos[1] + cellInfo.size[1] > viewMax)
+            {
+                var normalizedPosition = (cellInfo.pos[1] + cellInfo.size[1] - viewSize) / scrollSize;
+                scrollRect.verticalNormalizedPosition = 1 - normalizedPosition;
+            }
         }
     }
 

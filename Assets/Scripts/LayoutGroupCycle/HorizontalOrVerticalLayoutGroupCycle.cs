@@ -84,6 +84,8 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
 
     public abstract void ResetPosition();
 
+    public abstract void Locate(uint index);
+
     public override void CalculateLayoutInputHorizontal()
     {
         rectChildren.Clear();
@@ -212,7 +214,6 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
 
                 m_CellInfoMap[i].size[axis] = requiredSpace;
                 m_CellInfoMap[i].pos[axis] = startOffset;
-
             }
         }
         else if (capacity > 0)

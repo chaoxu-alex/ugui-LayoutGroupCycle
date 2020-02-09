@@ -9,4 +9,6 @@ public interface ILayoutGroupCycle
     void Populate();
 
     void ResetPosition();
+
+    void Locate(uint index);
 }
