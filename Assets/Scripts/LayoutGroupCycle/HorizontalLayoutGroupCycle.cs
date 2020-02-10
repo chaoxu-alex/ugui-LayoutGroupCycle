@@ -38,24 +38,7 @@ public class HorizontalLayoutGroupCycle : HorizontalOrVerticalLayoutGroupCycle
 
     public override void Locate(uint index)
     {
-        if (m_CellInfoMap != null && 0 <= index && index < m_CellInfoMap.Length)
-        {
-            var contentSize = rectTransform.rect.size[0];
-            var viewSize = scrollRect.viewport.rect.size[0];
-            var scrollSize = Mathf.Max(0, contentSize - viewSize);
-            var viewMin = m_NormalizedPosition[0] * scrollSize;
-            var viewMax = viewMin + viewSize;
-            var cellInfo = m_CellInfoMap[index];
-
-            if (cellInfo.pos[0] < viewMin)
-            {
-                scrollRect.horizontalNormalizedPosition = cellInfo.pos[0] / scrollSize;
-            }
-            else if (cellInfo.pos[0] + cellInfo.size[0] > viewMax)
-            {
-                scrollRect.horizontalNormalizedPosition = (cellInfo.pos[0] + cellInfo.size[0] - viewSize) / scrollSize;
-            }
-        }
+        LocateAlongAxis(0, index);
     }
 
     /// <summary>

@@ -86,6 +86,33 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
 
     public abstract void Locate(uint index);
 
+    protected void LocateAlongAxis(int axis, uint index)
+    {
+        if (m_CellInfoMap != null && index < m_CellInfoMap.Length)
+        {
+            var contentSize = rectTransform.rect.size[axis];
+            var viewSize = scrollRect.viewport.rect.size[axis];
+            var scrollSize = Mathf.Max(0, contentSize - viewSize);
+            var viewMin = m_NormalizedPosition[axis] * scrollSize;
+            var viewMax = viewMin + viewSize;
+            var cellInfo = m_CellInfoMap[index];
+
+            var normalizedPosition = scrollRect.normalizedPosition;
+            if (cellInfo.pos[axis] < viewMin)
+            {
+                normalizedPosition[axis] = cellInfo.pos[axis] / scrollSize;
+                if (axis == 1) normalizedPosition[axis] = 1 - normalizedPosition[axis];
+            }
+            else if (cellInfo.pos[axis] + cellInfo.size[axis] > viewMax)
+            {
+                normalizedPosition[axis] = (cellInfo.pos[axis] + cellInfo.size[axis] - viewSize) / scrollSize;
+                if (axis == 1) normalizedPosition[axis] = 1 - normalizedPosition[axis];
+            }
+
+            scrollRect.normalizedPosition = normalizedPosition;
+        }
+    }
+
     public override void CalculateLayoutInputHorizontal()
     {
         rectChildren.Clear();

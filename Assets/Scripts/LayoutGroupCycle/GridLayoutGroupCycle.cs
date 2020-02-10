@@ -20,7 +20,7 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
     protected int[] m_ChildIndexMap = null;
     protected Vector2 m_startOffset = Vector2.zero;
     protected Vector2 m_NormalizedPosition = Vector2.zero;
-    protected Vector2[] m_CellPositionMap = null;
+    protected Vector2[] m_CellPosMap = null;
     protected List<GameObject> m_PendingDeactiveList = new List<GameObject>();
     protected List<GameObject> m_PendingPopulateList = new List<GameObject>();
 
@@ -114,7 +114,41 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
 
     public void Locate(uint index)
     {
-        
+        if (scrollRect.horizontal)
+        {
+            LocateAlongAxis(0, index);
+        }
+        else if (scrollRect.vertical)
+        {
+            LocateAlongAxis(1, index);
+        }
+    }
+
+    protected void LocateAlongAxis(int axis, uint index)
+    {
+        if (m_CellPosMap != null && index < m_CellPosMap.Length)
+        {
+            var contentSize = rectTransform.rect.size[axis];
+            var viewSize = scrollRect.viewport.rect.size[axis];
+            var scrollSize = Mathf.Max(0, contentSize - viewSize);
+            var viewMin = (axis == 0 ? scrollRect.normalizedPosition[axis] : 1 - scrollRect.normalizedPosition[axis]) * scrollSize;
+            var viewMax = viewMin + viewSize;
+            var cellPos = m_CellPosMap[index];
+
+            var normalizedPosition = scrollRect.normalizedPosition;
+            if (cellPos[axis] < viewMin)
+            {
+                normalizedPosition[axis] = cellPos[axis] / scrollSize;
+                if (axis == 1) normalizedPosition[axis] = 1 - normalizedPosition[axis];
+            }
+            else if (cellPos[axis] + cellSize[axis] > viewMax)
+            {
+                normalizedPosition[axis] = (cellPos[axis] + cellSize[axis] - viewSize) / scrollSize;
+                if (axis == 1) normalizedPosition[axis] = 1 - normalizedPosition[axis];
+            }
+
+            scrollRect.normalizedPosition = normalizedPosition;
+        }
     }
 
     public override void CalculateLayoutInputHorizontal()
@@ -302,9 +336,9 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
         Vector2 requiredSpace = new Vector2(m_actualCellCountX * cellSize.x + (m_actualCellCountX - 1) * spacing.x, m_actualCellCountY * cellSize.y + (m_actualCellCountY - 1) * spacing.y);
         m_startOffset = new Vector2(GetStartOffset(0, requiredSpace.x), GetStartOffset(1, requiredSpace.y));
 
-        if (m_CellPositionMap == null || m_CellPositionMap.Length != capacity)
+        if (m_CellPosMap == null || m_CellPosMap.Length != capacity)
         {
-            m_CellPositionMap = new Vector2[capacity];
+            m_CellPosMap = new Vector2[capacity];
         }
 
         for (int i = 0; i < capacity; i++)
@@ -331,8 +365,8 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
                 positionY = m_actualCellCountY - 1 - positionY;
             }
 
-            m_CellPositionMap[i].x = m_startOffset.x + (cellSize[0] + spacing[0]) * positionX;
-            m_CellPositionMap[i].y = m_startOffset.y + (cellSize[1] + spacing[1]) * positionY;
+            m_CellPosMap[i].x = m_startOffset.x + (cellSize[0] + spacing[0]) * positionX;
+            m_CellPosMap[i].y = m_startOffset.y + (cellSize[1] + spacing[1]) * positionY;
         }
     }
 
@@ -377,8 +411,8 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
 
                         if (index < capacity)
                         {
-                            SetChildAlongAxis(child, 0, m_CellPositionMap[index].x, cellSize[0]);
-                            SetChildAlongAxis(child, 1, m_CellPositionMap[index].y, cellSize[1]);
+                            SetChildAlongAxis(child, 0, m_CellPosMap[index].x, cellSize[0]);
+                            SetChildAlongAxis(child, 1, m_CellPosMap[index].y, cellSize[1]);
                         }
 
                         if (child.gameObject.activeSelf != index < capacity)
