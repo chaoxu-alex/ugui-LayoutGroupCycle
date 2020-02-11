@@ -3,6 +3,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
+[RequireComponent(typeof(ContentSizeFitter))]
 public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVerticalLayoutGroup, ILayoutGroupCycle
 {
     public delegate void OnGetCellSize(int index, int axis, bool controlSize, bool childForceExpand,

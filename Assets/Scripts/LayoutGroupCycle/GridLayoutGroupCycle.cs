@@ -3,6 +3,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
+[RequireComponent(typeof(ContentSizeFitter))]
 public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
 {
     [SerializeField]
@@ -153,6 +154,19 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
 
     public override void CalculateLayoutInputHorizontal()
     {
+        var contentSizeFitter = GetComponent<ContentSizeFitter>();
+        if (contentSizeFitter != null)
+        {
+            if (startAxis == Axis.Horizontal)
+            {
+                contentSizeFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            }
+            else
+            {
+                contentSizeFitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            }
+        }
+
         UpdateChildren();
 
         int minColumns = 0;
@@ -244,7 +258,7 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
     /// </summary>
     public override void SetLayoutHorizontal()
     {
-        UpdateLayoutSize();
+        UpdateChildrenLayout();
     }
 
     /// <summary>
@@ -258,7 +272,7 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
         UpdateChildrenPositions();
     }
 
-    protected void UpdateLayoutSize()
+    protected void UpdateChildrenLayout()
     {
         // Only set the sizes when invoked for horizontal axis, not the positions.
         for (int i = 0; i < rectChildren.Count; i++)

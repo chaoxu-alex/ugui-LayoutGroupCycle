@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.UI;
 
 public class VerticalLayoutGroupCycle : HorizontalOrVerticalLayoutGroupCycle
 {
@@ -10,6 +11,12 @@ public class VerticalLayoutGroupCycle : HorizontalOrVerticalLayoutGroupCycle
         {
             scrollRect.horizontal = false;
             scrollRect.vertical = true;
+        }
+
+        var contentSizeFitter = GetComponent<ContentSizeFitter>();
+        if (contentSizeFitter != null)
+        {
+            contentSizeFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         }
     }
 
