@@ -37,8 +37,9 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
     protected int[] m_ChildIndexMap = null;
     protected Vector2 m_NormalizedPosition = Vector2.zero;
     protected CellInfo[] m_CellInfoMap = null;
-    private List<GameObject> m_PendingDeactiveList = new List<GameObject>();
-    private List<GameObject> m_PendingPopulateList = new List<GameObject>();
+    protected List<GameObject> m_PendingActiveList = new List<GameObject>();
+    protected List<GameObject> m_PendingDeactiveList = new List<GameObject>();
+    protected List<GameObject> m_PendingPopulateList = new List<GameObject>();
 
     protected override void Awake()
     {
@@ -54,6 +55,14 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
         else
         {
             Debug.LogError("HorizontalOrVerticalLayoutGroupCycle should be used with ScrollRect.");
+        }
+
+        if (Application.isPlaying)
+        {
+            foreach (Transform trans in rectTransform)
+            {
+                trans.gameObject.SetActive(false);
+            }
         }
     }
 
@@ -114,7 +123,7 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
         }
     }
 
-    public override void CalculateLayoutInputHorizontal()
+    protected void UpdateChildren()
     {
         rectChildren.Clear();
         var toIgnoreList = ListPool<Component>.Get();
@@ -145,17 +154,23 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
 
         ListPool<Component>.Release(toIgnoreList);
 
+        m_Tracker.Clear();
+
         if (m_ChildIndexMap == null || m_ChildIndexMap.Length != rectChildren.Count)
         {
             m_ChildIndexMap = Enumerable.Repeat(-1, rectChildren.Count).ToArray();
         }
 
-        m_Tracker.Clear();
-
         if (m_CellInfoMap == null || m_CellInfoMap.Length != capacity)
         {
             m_CellInfoMap = new CellInfo[capacity];
         }
+    }
+
+
+    public override void CalculateLayoutInputHorizontal()
+    {
+        UpdateChildren();
     }
 
     /// <summary>
@@ -222,6 +237,7 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
             totalMin -= spacing;
             totalPreferred -= spacing;
         }
+
         totalPreferred = Mathf.Max(totalMin, totalPreferred);
         SetLayoutInputForAxis(totalMin, totalPreferred, totalFlexible, axis);
     }
@@ -387,12 +403,20 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
                                 // child.gameObject.SetActive(index < capacity);
                                 if (index < capacity)
                                 {
-                                    child.gameObject.SetActive(true);
+                                    // pending activation of children to late update as onPopulateChild to make sure they are in the same frame
+                                    if (!child.gameObject.activeSelf)
+                                    {
+                                        m_PendingActiveList.Add(child.gameObject);
+                                    }
                                 }
                                 else
                                 {
                                     // pending deactivation of children to late update to avoid error metioned above
-                                    m_PendingDeactiveList.Add(child.gameObject);
+                                    if (child.gameObject.activeSelf)
+                                    {
+                                        m_PendingDeactiveList.Add(child.gameObject);
+                                    }
+
                                 }
                             }
 
@@ -433,6 +457,13 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
 
     void LateUpdate()
     {
+        if (m_PendingActiveList.Count > 0)
+        {
+            m_PendingActiveList.ForEach(go => go.SetActive(true));
+
+            m_PendingActiveList.Clear();
+        }
+
         if (m_PendingDeactiveList.Count > 0)
         {
             m_PendingDeactiveList.ForEach(go => go.SetActive(false));

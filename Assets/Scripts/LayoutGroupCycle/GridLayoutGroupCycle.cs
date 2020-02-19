@@ -22,6 +22,7 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
     protected Vector2 m_startOffset = Vector2.zero;
     protected Vector2 m_NormalizedPosition = Vector2.zero;
     protected Vector2[] m_CellPosMap = null;
+    protected List<GameObject> m_PendingActiveList = new List<GameObject>();
     protected List<GameObject> m_PendingDeactiveList = new List<GameObject>();
     protected List<GameObject> m_PendingPopulateList = new List<GameObject>();
 
@@ -46,6 +47,14 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
         else
         {
             Debug.LogError("GridLayoutGroupCycle should be used with ScrollRect.");
+        }
+
+        if (Application.isPlaying)
+        {
+            foreach (Transform trans in rectTransform)
+            {
+                trans.gameObject.SetActive(false);
+            }
         }
     }
 
@@ -222,12 +231,12 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
 
         ListPool<Component>.Release(toIgnoreList);
 
+        m_Tracker.Clear();
+
         if (m_ChildIndexMap == null || m_ChildIndexMap.Length != rectChildren.Count)
         {
             m_ChildIndexMap = Enumerable.Repeat(-1, rectChildren.Count).ToArray();
         }
-
-        m_Tracker.Clear();
     }
 
     public override void CalculateLayoutInputVertical()
@@ -435,12 +444,19 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
                             // child.gameObject.SetActive(index < capacity);
                             if (index < capacity)
                             {
-                                child.gameObject.SetActive(true);
+                                // pending activation of children to late update as onPopulateChild to make sure they are in the same frame
+                                if (!child.gameObject.activeSelf)
+                                {
+                                    m_PendingActiveList.Add(child.gameObject);
+                                }
                             }
                             else
                             {
                                 // pending deactivation of children to late update to avoid error metioned above
-                                m_PendingDeactiveList.Add(child.gameObject);
+                                if (child.gameObject.activeSelf)
+                                {
+                                    m_PendingDeactiveList.Add(child.gameObject);
+                                }
                             }
                         }
 
@@ -458,6 +474,13 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
 
     void LateUpdate()
     {
+        if (m_PendingActiveList.Count > 0)
+        {
+            m_PendingActiveList.ForEach(go => go.SetActive(true));
+
+            m_PendingActiveList.Clear();
+        }
+
         if (m_PendingDeactiveList.Count > 0)
         {
             m_PendingDeactiveList.ForEach(go => go.SetActive(false));
