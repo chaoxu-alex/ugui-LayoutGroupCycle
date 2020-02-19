@@ -404,19 +404,12 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
                                 if (index < capacity)
                                 {
                                     // pending activation of children to late update as onPopulateChild to make sure they are in the same frame
-                                    if (!child.gameObject.activeSelf)
-                                    {
-                                        m_PendingActiveList.Add(child.gameObject);
-                                    }
+                                    m_PendingActiveList.Add(child.gameObject);
                                 }
                                 else
                                 {
                                     // pending deactivation of children to late update to avoid error metioned above
-                                    if (child.gameObject.activeSelf)
-                                    {
-                                        m_PendingDeactiveList.Add(child.gameObject);
-                                    }
-
+                                    m_PendingDeactiveList.Add(child.gameObject);
                                 }
                             }
 
