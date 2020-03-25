@@ -11,8 +11,8 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
     public ScrollRect scrollRect { get { return m_ScrollRect; } set { m_ScrollRect = value; } }
 
     [SerializeField]
-    protected uint m_Capacity;
-    public uint capacity { get { return m_Capacity; } set { SetProperty(ref m_Capacity, value); } }
+    protected uint m_Size;
+    public uint size { get { return m_Size; } set { SetProperty(ref m_Size, value); } }
     public OnPopulateChild onPopulateChild { get; set; }
 
     protected int m_actualCellCountX = 0;
@@ -77,10 +77,10 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
         UpdateChildrenPositions(true);
     }
 
-    // this function makes sure Populate() is called while property capacity doesn't when capacity stay unchanged
-    public void SetCapacity(uint value)
+    // this function makes sure Populate() is called while property size doesn't when size stay unchanged
+    public void SetSize(uint value)
     {
-        capacity = value;
+        size = value;
 
         Populate();
     }
@@ -186,12 +186,12 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
         }
         else if (m_Constraint == Constraint.FixedRowCount)
         {
-            minColumns = preferredColumns = Mathf.CeilToInt(capacity / (float)m_ConstraintCount - 0.001f);
+            minColumns = preferredColumns = Mathf.CeilToInt(size / (float)m_ConstraintCount - 0.001f);
         }
         else
         {
             minColumns = 1;
-            preferredColumns = Mathf.CeilToInt(Mathf.Sqrt(capacity));
+            preferredColumns = Mathf.CeilToInt(Mathf.Sqrt(size));
         }
 
         SetLayoutInputForAxis(
@@ -244,7 +244,7 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
         int minRows = 0;
         if (m_Constraint == Constraint.FixedColumnCount)
         {
-            minRows = Mathf.CeilToInt(capacity / (float)m_ConstraintCount - 0.001f);
+            minRows = Mathf.CeilToInt(size / (float)m_ConstraintCount - 0.001f);
         }
         else if (m_Constraint == Constraint.FixedRowCount)
         {
@@ -254,7 +254,7 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
         {
             float width = rectTransform.rect.width;
             int cellCountX = Mathf.Max(1, Mathf.FloorToInt((width - padding.horizontal + spacing.x + 0.001f) / (cellSize.x + spacing.x)));
-            minRows = Mathf.CeilToInt(capacity / (float)cellCountX);
+            minRows = Mathf.CeilToInt(size / (float)cellCountX);
         }
 
         float minSpace = padding.vertical + (cellSize.y + spacing.y) * minRows - spacing.y;
@@ -307,18 +307,18 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
         {
             cellCountX = m_ConstraintCount;
 
-            if (capacity > cellCountX)
+            if (size > cellCountX)
             {
-                cellCountY = ((int)capacity + cellCountX - 1) / cellCountX;
+                cellCountY = ((int)size + cellCountX - 1) / cellCountX;
             }
         }
         else if (m_Constraint == Constraint.FixedRowCount)
         {
             cellCountY = m_ConstraintCount;
 
-            if (capacity > cellCountY)
+            if (size > cellCountY)
             {
-                cellCountX = ((int)capacity + cellCountY - 1) / cellCountY;
+                cellCountX = ((int)size + cellCountY - 1) / cellCountY;
             }
         }
         else
@@ -348,23 +348,23 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
         if (startAxis == Axis.Horizontal)
         {
             m_actualCellCountX = cellCountX;
-            m_actualCellCountY = Mathf.Clamp(cellCountY, 1, Mathf.CeilToInt(capacity / (float)cellCountX));
+            m_actualCellCountY = Mathf.Clamp(cellCountY, 1, Mathf.CeilToInt(size / (float)cellCountX));
         }
         else
         {
             m_actualCellCountY = cellCountY;
-            m_actualCellCountX = Mathf.Clamp(cellCountX, 1, Mathf.CeilToInt(capacity / (float)cellCountY));
+            m_actualCellCountX = Mathf.Clamp(cellCountX, 1, Mathf.CeilToInt(size / (float)cellCountY));
         }
 
         Vector2 requiredSpace = new Vector2(m_actualCellCountX * cellSize.x + (m_actualCellCountX - 1) * spacing.x, m_actualCellCountY * cellSize.y + (m_actualCellCountY - 1) * spacing.y);
         m_startOffset = new Vector2(GetStartOffset(0, requiredSpace.x), GetStartOffset(1, requiredSpace.y));
 
-        if (m_CellPosMap == null || m_CellPosMap.Length != capacity)
+        if (m_CellPosMap == null || m_CellPosMap.Length != size)
         {
-            m_CellPosMap = new Vector2[capacity];
+            m_CellPosMap = new Vector2[size];
         }
 
-        for (int i = 0; i < capacity; i++)
+        for (int i = 0; i < size; i++)
         {
             int positionX;
             int positionY;
@@ -425,24 +425,24 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
             for (int i = 0; i < rectChildren.Count; i++)
             {
                 int index = i + m_StartIndex;
-                if (index < capacity || index < rectChildren.Count)
+                if (index < size || index < rectChildren.Count)
                 {
                     int childIndex = index % rectChildren.Count;
                     if (!cycling || m_ChildIndexMap[childIndex] != index)
                     {
                         var child = rectChildren[childIndex];
 
-                        if (index < capacity)
+                        if (index < size)
                         {
                             SetChildAlongAxis(child, 0, m_CellPosMap[index].x, cellSize[0]);
                             SetChildAlongAxis(child, 1, m_CellPosMap[index].y, cellSize[1]);
                         }
 
-                        if (child.gameObject.activeSelf != index < capacity)
+                        if (child.gameObject.activeSelf != index < size)
                         {
                             // the code commented below will trigger error while rebuilding layouts: Trying to remove xxx from rebuild list while we are already inside a rebuild loop
-                            // child.gameObject.SetActive(index < capacity);
-                            if (index < capacity)
+                            // child.gameObject.SetActive(index < size);
+                            if (index < size)
                             {
                                 // pending activation of children to late update as onPopulateChild to make sure they are in the same frame
                                 m_PendingActiveList.Add(child.gameObject);
@@ -454,7 +454,7 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
                             }
                         }
 
-                        if (index < capacity && m_ChildIndexMap[childIndex] != index)
+                        if (index < size && m_ChildIndexMap[childIndex] != index)
                         {
                             m_ChildIndexMap[childIndex] = index;
 

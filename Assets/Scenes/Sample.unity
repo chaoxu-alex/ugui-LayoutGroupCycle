@@ -738,7 +738,7 @@ MonoBehaviour:
   m_Constraint: 0
   m_ConstraintCount: 2
   m_ScrollRect: {fileID: 931926153}
-  m_Capacity: 20
+  m_Size: 10
 --- !u!114 &376165513
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -770,7 +770,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &456112062
 RectTransform:
   m_ObjectHideFlags: 0
@@ -894,7 +894,7 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ScrollRect: {fileID: 802427142}
-  m_Capacity: 15
+  m_Size: 10
   m_Reversed: 0
 --- !u!114 &512346820
 MonoBehaviour:
@@ -1000,7 +1000,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &625199762
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1219,7 +1219,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &724401456
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1968,7 +1968,7 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ScrollRect: {fileID: 2105110776}
-  m_Capacity: 15
+  m_Size: 10
   m_Reversed: 0
 --- !u!1 &1209839446
 GameObject:
@@ -2279,7 +2279,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1401925617
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2727,7 +2727,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1807048489
 RectTransform:
   m_ObjectHideFlags: 0

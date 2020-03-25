@@ -25,8 +25,8 @@ public class VerticalLayoutGroupCycle : HorizontalOrVerticalLayoutGroupCycle
         // vertical layout group cycle is aligned from top to bottom by default while y axis growth from bottom to top.
         m_NormalizedPosition = Vector2.one - normalizedPosition;
 
-        // there are chances that capacity and m_CellInfoMap.Length doesn't match when changing capacity frequently in editor.
-        if (capacity == m_CellInfoMap.Length)
+        // there are chances that size and m_CellInfoMap.Length doesn't match when changing size frequently in editor.
+        if (size == m_CellInfoMap.Length)
         {
             SetChildrenAlongAxisCycle(0, true, true);
 

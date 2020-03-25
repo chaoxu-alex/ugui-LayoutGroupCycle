@@ -6,14 +6,14 @@ using UnityEditor.UI;
 public class GridLayoutGroupCycleEditor : GridLayoutGroupEditor
 {
     // SerializedProperty m_ScrollRect;
-    SerializedProperty m_Capacity;
+    SerializedProperty m_Size;
     
     protected override void OnEnable()
     {
         base.OnEnable();
 
         // m_ScrollRect = serializedObject.FindProperty("m_ScrollRect");
-        m_Capacity = serializedObject.FindProperty("m_Capacity");
+        m_Size = serializedObject.FindProperty("m_Size");
     }
 
     public override void OnInspectorGUI()
@@ -23,7 +23,7 @@ public class GridLayoutGroupCycleEditor : GridLayoutGroupEditor
         serializedObject.Update();
 
         // EditorGUILayout.PropertyField(m_ScrollRect);
-        EditorGUILayout.PropertyField(m_Capacity, true);
+        EditorGUILayout.PropertyField(m_Size, true);
 
         serializedObject.ApplyModifiedProperties();
     }

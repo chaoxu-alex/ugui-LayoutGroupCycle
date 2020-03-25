@@ -24,8 +24,8 @@ public class HorizontalLayoutGroupCycle : HorizontalOrVerticalLayoutGroupCycle
     {
         m_NormalizedPosition = normalizedPosition;
 
-        // there are chances that capacity and m_CellInfoMap.Length doesn't match when changing capacity frequently in editor.
-        if (capacity == m_CellInfoMap.Length)
+        // there are chances that size and m_CellInfoMap.Length doesn't match when changing size frequently in editor.
+        if (size == m_CellInfoMap.Length)
         {
             SetChildrenAlongAxisCycle(0, false, true);
 

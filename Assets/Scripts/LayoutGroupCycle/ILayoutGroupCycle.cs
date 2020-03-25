@@ -4,7 +4,7 @@ public delegate void OnPopulateChild(GameObject gameObject, int index);
 
 public interface ILayoutGroupCycle
 {
-    void SetCapacity(uint value);
+    void SetSize(uint value);
 
     void Populate();
 

@@ -24,8 +24,8 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
     public ScrollRect scrollRect { get { return m_ScrollRect; } set { m_ScrollRect = value; } }
 
     [SerializeField]
-    protected uint m_Capacity;
-    public uint capacity { get { return m_Capacity; } set { SetProperty(ref m_Capacity, value); } }
+    protected uint m_Size;
+    public uint size { get { return m_Size; } set { SetProperty(ref m_Size, value); } }
     [SerializeField]
     protected bool m_Reversed = false;
     public bool reversed { get { return m_Reversed; } set { SetProperty(ref m_Reversed, value); } }
@@ -68,10 +68,10 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
 
     protected abstract void OnScrolling(Vector2 normalizedPosition);
 
-    // this function makes sure Populate() is called while property capacity doesn't when capacity stay the same
-    public void SetCapacity(uint value)
+    // this function makes sure Populate() is called while property size doesn't when size stay the same
+    public void SetSize(uint value)
     {
-        capacity = value;
+        size = value;
 
         Populate();
     }
@@ -161,9 +161,9 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
             m_ChildIndexMap = Enumerable.Repeat(-1, rectChildren.Count).ToArray();
         }
 
-        if (m_CellInfoMap == null || m_CellInfoMap.Length != capacity)
+        if (m_CellInfoMap == null || m_CellInfoMap.Length != size)
         {
-            m_CellInfoMap = new CellInfo[capacity];
+            m_CellInfoMap = new CellInfo[size];
         }
     }
 
@@ -191,7 +191,7 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
 
         bool alongOtherAxis = (isVertical ^ (axis == 1));
 
-        for (int i = 0; i < capacity; i++)
+        for (int i = 0; i < size; i++)
         {
             float min, preferred, flexible, scaleFactor;
             if (onGetCellSize != null)
@@ -251,7 +251,7 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
         if (alongOtherAxis)
         {
             float innerSize = size - (axis == 0 ? padding.horizontal : padding.vertical);
-            for (int i = 0; i < capacity; i++)
+            for (int i = 0; i < this.size; i++)
             {
                 float requiredSpace = Mathf.Clamp(innerSize, m_CellInfoMap[i].min[axis], m_CellInfoMap[i].flexible[axis] > 0 ? size : m_CellInfoMap[i].preferred[axis]);
                 float startOffset = GetStartOffset(axis, requiredSpace * (useScale ? m_CellInfoMap[i].scale[axis] : 1.0f));
@@ -260,7 +260,7 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
                 m_CellInfoMap[i].pos[axis] = startOffset;
             }
         }
-        else if (capacity > 0)
+        else if (this.size > 0)
         {
             float pos = (axis == 0 ? padding.left : padding.top);
             float itemFlexibleMultiplier = 0;
@@ -278,9 +278,9 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
             if (GetTotalMinSize(axis) != GetTotalPreferredSize(axis))
                 minMaxLerp = Mathf.Clamp01((size - GetTotalMinSize(axis)) / (GetTotalPreferredSize(axis) - GetTotalMinSize(axis)));
 
-            for (int i = 0; i < capacity; i++)
+            for (int i = 0; i < this.size; i++)
             {
-                var index = reversed ? capacity - 1 - i : i;
+                var index = reversed ? this.size - 1 - i : i;
                 m_CellInfoMap[index].size[axis] = Mathf.Lerp(m_CellInfoMap[index].min[axis], m_CellInfoMap[index].preferred[axis], minMaxLerp);
                 m_CellInfoMap[index].size[axis] += m_CellInfoMap[index].flexible[axis] * itemFlexibleMultiplier;
                 m_CellInfoMap[index].pos[axis] = pos;
@@ -316,7 +316,7 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
             currentOffset = size - currentOffset;
         }
 
-        int newStartIndex = Mathf.Max(0, (int)capacity - 1);
+        int newStartIndex = Mathf.Max(0, (int)this.size - 1);
         if (reversed)
         {
             for (; newStartIndex > 0; --newStartIndex)
@@ -343,13 +343,13 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
         bool alongOtherAxis = (isVertical ^ (axis == 1));
         if (alongOtherAxis)
         {
-            if (capacity > 0)
+            if (this.size > 0)
             {
                 float innerSize = size - (axis == 0 ? padding.horizontal : padding.vertical);
                 for (int i = 0; i < rectChildren.Count; i++)
                 {
                     var index = newStartIndex + i;
-                    if (index < capacity)
+                    if (index < this.size)
                     {
                         var childIndex = index % rectChildren.Count;
                         var child = rectChildren[childIndex];
@@ -376,14 +376,14 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
                 for (int i = 0; i < rectChildren.Count; i++)
                 {
                     var index = m_StartIndex + i;
-                    if (index < capacity || index < rectChildren.Count)
+                    if (index < this.size || index < rectChildren.Count)
                     {
                         var childIndex = index % rectChildren.Count;
                         if (!cycling || m_ChildIndexMap[childIndex] != index)
                         {
                             var child = rectChildren[childIndex];
 
-                            if (index < capacity)
+                            if (index < this.size)
                             {
                                 var scale = useScale ? m_CellInfoMap[index].scale[axis] : 1.0f;
                                 if (controlSize)
@@ -397,11 +397,11 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
                                 }
                             }
 
-                            if (child.gameObject.activeSelf != index < capacity)
+                            if (child.gameObject.activeSelf != index < this.size)
                             {
                                 // the code commented below will trigger error while rebuilding layouts: Trying to remove xxx from rebuild list while we are already inside a rebuild loop
-                                // child.gameObject.SetActive(index < capacity);
-                                if (index < capacity)
+                                // child.gameObject.SetActive(index < size);
+                                if (index < this.size)
                                 {
                                     // pending activation of children to late update as onPopulateChild to make sure they are in the same frame
                                     m_PendingActiveList.Add(child.gameObject);
@@ -413,7 +413,7 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
                                 }
                             }
 
-                            if (index < capacity && m_ChildIndexMap[childIndex] != index)
+                            if (index < this.size && m_ChildIndexMap[childIndex] != index)
                             {
                                 m_ChildIndexMap[childIndex] = index;
 
