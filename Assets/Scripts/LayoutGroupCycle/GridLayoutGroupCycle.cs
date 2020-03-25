@@ -98,7 +98,8 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
             }
         }
 
-        SetDirty();
+        //SetDirty();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(rectTransform);
     }
 
     [ContextMenu("Reset Position")]
@@ -425,41 +426,35 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
             for (int i = 0; i < rectChildren.Count; i++)
             {
                 int index = i + m_StartIndex;
-                if (index < size || index < rectChildren.Count)
+                int childIndex = index % rectChildren.Count;
+                var child = rectChildren[childIndex];
+
+                if (index < size)
                 {
-                    int childIndex = index % rectChildren.Count;
                     if (!cycling || m_ChildIndexMap[childIndex] != index)
                     {
-                        var child = rectChildren[childIndex];
+                        SetChildAlongAxis(child, 0, m_CellPosMap[index].x, cellSize[0]);
+                        SetChildAlongAxis(child, 1, m_CellPosMap[index].y, cellSize[1]);
 
-                        if (index < size)
-                        {
-                            SetChildAlongAxis(child, 0, m_CellPosMap[index].x, cellSize[0]);
-                            SetChildAlongAxis(child, 1, m_CellPosMap[index].y, cellSize[1]);
-                        }
-
-                        if (child.gameObject.activeSelf != index < size)
-                        {
-                            // the code commented below will trigger error while rebuilding layouts: Trying to remove xxx from rebuild list while we are already inside a rebuild loop
-                            // child.gameObject.SetActive(index < size);
-                            if (index < size)
-                            {
-                                // pending activation of children to late update as onPopulateChild to make sure they are in the same frame
-                                m_PendingActiveList.Add(child.gameObject);
-                            }
-                            else
-                            {
-                                // pending deactivation of children to late update to avoid error metioned above
-                                m_PendingDeactiveList.Add(child.gameObject);
-                            }
-                        }
-
-                        if (index < size && m_ChildIndexMap[childIndex] != index)
+                        if (m_ChildIndexMap[childIndex] != index)
                         {
                             m_ChildIndexMap[childIndex] = index;
-
                             m_PendingPopulateList.Add(child.gameObject);
                         }
+                    }
+
+                    if (!child.gameObject.activeSelf)
+                    {
+                        // pending activation of children to late update as onPopulateChild to make sure they are in the same frame
+                        m_PendingActiveList.Add(child.gameObject);
+                    }
+                }
+                else
+                {
+                    if (child.gameObject.activeSelf)
+                    {
+                        // pending deactivation of children to late update to removing graphic from rebuild list while we are already inside a rebuild loop
+                        m_PendingDeactiveList.Add(child.gameObject);
                     }
                 }
             }
@@ -488,7 +483,10 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
             {
                 var index = m_ChildIndexMap[go.transform.GetSiblingIndex()];
 
-                onPopulateChild?.Invoke(go, index);
+                if (index >= 0)
+                {
+                    onPopulateChild?.Invoke(go, index);
+                }
 
                 Debug.Log($"GridLayoutGroupCycle.PopulateChild({index})");
             });

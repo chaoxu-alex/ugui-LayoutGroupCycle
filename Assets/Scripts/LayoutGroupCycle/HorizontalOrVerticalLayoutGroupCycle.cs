@@ -89,7 +89,8 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
             }
         }
 
-        SetDirty();
+        //SetDirty();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(rectTransform);
     }
 
     public abstract void ResetPosition();
@@ -376,49 +377,43 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
                 for (int i = 0; i < rectChildren.Count; i++)
                 {
                     var index = m_StartIndex + i;
-                    if (index < this.size || index < rectChildren.Count)
+                    var childIndex = index % rectChildren.Count;
+                    var child = rectChildren[childIndex];
+
+                    if (index < this.size)
                     {
-                        var childIndex = index % rectChildren.Count;
                         if (!cycling || m_ChildIndexMap[childIndex] != index)
                         {
-                            var child = rectChildren[childIndex];
-
-                            if (index < this.size)
+                            var scale = useScale ? m_CellInfoMap[index].scale[axis] : 1.0f;
+                            if (controlSize)
                             {
-                                var scale = useScale ? m_CellInfoMap[index].scale[axis] : 1.0f;
-                                if (controlSize)
-                                {
-                                    SetChildAlongAxisWithScale(child, axis, m_CellInfoMap[index].pos[axis], m_CellInfoMap[index].size[axis], scale);
-                                }
-                                else
-                                {
-                                    float offsetInCell = (m_CellInfoMap[index].size[axis] - child.sizeDelta[axis]) * alignmentOnAxis;
-                                    SetChildAlongAxisWithScale(child, axis, m_CellInfoMap[index].pos[axis] + offsetInCell, scale);
-                                }
+                                SetChildAlongAxisWithScale(child, axis, m_CellInfoMap[index].pos[axis], m_CellInfoMap[index].size[axis], scale);
+                            }
+                            else
+                            {
+                                float offsetInCell = (m_CellInfoMap[index].size[axis] - child.sizeDelta[axis]) * alignmentOnAxis;
+                                SetChildAlongAxisWithScale(child, axis, m_CellInfoMap[index].pos[axis] + offsetInCell, scale);
                             }
 
-                            if (child.gameObject.activeSelf != index < this.size)
-                            {
-                                // the code commented below will trigger error while rebuilding layouts: Trying to remove xxx from rebuild list while we are already inside a rebuild loop
-                                // child.gameObject.SetActive(index < size);
-                                if (index < this.size)
-                                {
-                                    // pending activation of children to late update as onPopulateChild to make sure they are in the same frame
-                                    m_PendingActiveList.Add(child.gameObject);
-                                }
-                                else
-                                {
-                                    // pending deactivation of children to late update to avoid error metioned above
-                                    m_PendingDeactiveList.Add(child.gameObject);
-                                }
-                            }
-
-                            if (index < this.size && m_ChildIndexMap[childIndex] != index)
+                            if (m_ChildIndexMap[childIndex] != index)
                             {
                                 m_ChildIndexMap[childIndex] = index;
-
                                 m_PendingPopulateList.Add(child.gameObject);
                             }
+                        }
+
+                        if (!child.gameObject.activeSelf)
+                        {
+                            // pending activation of children to late update as onPopulateChild to make sure they are in the same frame
+                            m_PendingActiveList.Add(child.gameObject);
+                        }
+                    }
+                    else
+                    {
+                        if (child.gameObject.activeSelf)
+                        {
+                            // pending deactivation of children to late update to removing graphic from rebuild list while we are already inside a rebuild loop
+                            m_PendingDeactiveList.Add(child.gameObject);
                         }
                     }
                 }
@@ -470,7 +465,10 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
             {
                 var index = m_ChildIndexMap[go.transform.GetSiblingIndex()];
 
-                onPopulateChild?.Invoke(go, index);
+                if (index >= 0)
+                {
+                    onPopulateChild?.Invoke(go, index);
+                }
 
                 Debug.Log($"HorizontalOrVerticlLayoutGroupCycle.PopulateChild({index})");
             });
