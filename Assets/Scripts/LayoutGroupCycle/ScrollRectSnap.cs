@@ -25,20 +25,28 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
     [SerializeField]
     [Range(0f, 1f)]
     protected float m_ViewOffset = 0.5f;
+    public float viewOffset { get { return m_ViewOffset; } set { m_ViewOffset = Mathf.Clamp01(value); } }
+
+    [SerializeField]
+    protected int m_ViewOffsetPixel = 0;
+    public int viewOffsetPixel { get { return m_ViewOffsetPixel; } set { m_ViewOffsetPixel = value; } }
 
     [SerializeField]
     [Range(0f, 1f)]
     protected float m_ChildOffset = 0.5f;
+    public float childOffset { get { return m_ChildOffset; } set { m_ChildOffset = Mathf.Clamp01(value); } }
+
+    [SerializeField]
+    protected int m_ChildOffsetPixel = 0;
+    public int childOffsetPixel { get { return m_ChildOffsetPixel; } set { m_ChildOffsetPixel = value; } }
 
     [SerializeField]
     protected float m_SpeedThreshold = 500.0f;
+    public float speedThreshold { get { return m_SpeedThreshold; } set { m_SpeedThreshold = value; } }
 
     [SerializeField]
     protected float m_SmoothTime = 0.1f;
-
-    private bool m_Sanpping = false;
-    private bool m_Dragging = false;
-    private Vector2 m_SnapPos = Vector2.zero;
+    public float smoothTime { get { return m_SmoothTime; } set { m_SmoothTime = value; } }
 
     [SerializeField]
     private BeginSnapEvent m_OnBeginSnap = new BeginSnapEvent();
@@ -51,6 +59,10 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
     [SerializeField]
     private EndSnapEvent m_OnEndSnap = new EndSnapEvent();
     public EndSnapEvent onEndSnap { get { return m_OnEndSnap; } set { m_OnEndSnap = value; } }
+
+    private bool m_Sanpping = false;
+    private bool m_Dragging = false;
+    private Vector2 m_SnapPos = Vector2.zero;
 
     protected override void Awake()
     {
@@ -119,6 +131,8 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
 
         if (scrollRect != null)
         {
+            var scrollAxis = scrollRect.vertical ? 1 : 0;
+
             var view = scrollRect.viewport;
             var viewBounds = new Bounds(view.rect.center, view.rect.size);
             var snapViewX = Mathf.Lerp(viewBounds.min.x, viewBounds.max.x, m_ViewOffset);
@@ -128,8 +142,8 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
 
             var content = scrollRect.content;
             var snapViewOffsetContent = content.InverseTransformPoint(snapViewWorldPos);
+            snapViewOffsetContent[scrollAxis] += viewOffsetPixel;
 
-            var scrollAxis = scrollRect.vertical ? 1 : 0;
             var minDistance = float.MaxValue;
             foreach (RectTransform child in childrenRoot ?? content)
             {
@@ -139,6 +153,7 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
                     var snapChildY = Mathf.Lerp(child.rect.min.y, child.rect.max.y, m_ChildOffset);
                     var snapChildPos = new Vector3(snapChildX, snapChildY);
                     var snapChildOffsetContent = content.InverseTransformPoint(child.TransformPoint(snapChildPos));
+                    snapChildOffsetContent[scrollAxis] += childOffsetPixel;
                     var distance = Mathf.Abs(snapViewOffsetContent[scrollAxis] - snapChildOffsetContent[scrollAxis]);
                     if (distance < minDistance)
                     {
@@ -165,6 +180,7 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
                 if (Mathf.Abs(scrollRect.velocity[scrollAxis]) < m_SpeedThreshold)
                 {
                     // scrollRect.StopMovement();
+                    // TODO: clamp final pos within content bounds
                     m_SnapPos = scrollRect.content.anchoredPosition + GetSnapOffset();
                     m_Sanpping = true;
                     m_OnBeginSnap.Invoke();
