@@ -25,8 +25,8 @@ public class HorizontalOrVerticalLayoutGroupCycleEditor : HorizontalOrVerticalLa
         serializedObject.Update();
 
         // EditorGUILayout.PropertyField(m_ScrollRect);
-        EditorGUILayout.PropertyField(m_Size, true);
-        EditorGUILayout.PropertyField(m_Reversed, true);
+        EditorGUILayout.PropertyField(m_Size);
+        EditorGUILayout.PropertyField(m_Reversed);
 
         serializedObject.ApplyModifiedProperties();
     }

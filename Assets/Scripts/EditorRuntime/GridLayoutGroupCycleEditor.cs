@@ -23,7 +23,7 @@ public class GridLayoutGroupCycleEditor : GridLayoutGroupEditor
         serializedObject.Update();
 
         // EditorGUILayout.PropertyField(m_ScrollRect);
-        EditorGUILayout.PropertyField(m_Size, true);
+        EditorGUILayout.PropertyField(m_Size);
 
         serializedObject.ApplyModifiedProperties();
     }

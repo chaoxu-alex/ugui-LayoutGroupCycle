@@ -15,6 +15,14 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
     public class EndSnapEvent : UnityEvent { }
 
     [SerializeField]
+    protected ScrollRect m_ScrollRect;
+    public ScrollRect scrollRect { get { return m_ScrollRect; } set { m_ScrollRect = value; } }
+
+    [SerializeField]
+    protected RectTransform m_ChildrenRoot;
+    public RectTransform childrenRoot { get { return m_ChildrenRoot; } set { m_ChildrenRoot = value; } }
+
+    [SerializeField]
     [Range(0f, 1f)]
     protected float m_ViewOffset = 0.5f;
 
@@ -27,10 +35,6 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
 
     [SerializeField]
     protected float m_SmoothTime = 0.1f;
-
-    [SerializeField]
-    protected ScrollRect m_ScrollRect;
-    public ScrollRect scrollRect { get { return m_ScrollRect; } set { m_ScrollRect = value; } }
 
     private bool m_Sanpping = false;
     private bool m_Dragging = false;
@@ -53,6 +57,11 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
         if (scrollRect == null)
         {
             scrollRect = GetComponent<ScrollRect>();
+        }
+
+        if (childrenRoot == null && scrollRect != null)
+        {
+            childrenRoot = scrollRect.content;
         }
     }
 
@@ -122,7 +131,7 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
 
             var scrollAxis = scrollRect.vertical ? 1 : 0;
             var minDistance = float.MaxValue;
-            foreach (RectTransform child in content)
+            foreach (RectTransform child in childrenRoot ?? content)
             {
                 if (child.gameObject.activeSelf)
                 {
