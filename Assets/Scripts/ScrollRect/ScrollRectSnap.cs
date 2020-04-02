@@ -45,8 +45,12 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
     public float speedThreshold { get { return m_SpeedThreshold; } set { m_SpeedThreshold = value; } }
 
     [SerializeField]
-    protected uint m_SnapSpeed = 1000;
-    public uint snapSpeed { get { return m_SnapSpeed; } set { m_SnapSpeed = value; } }
+    protected float m_SmoothTime = 0.1f;
+    public float smoothTime { get { return m_SmoothTime; } set { m_SmoothTime = value; } }
+
+    [SerializeField]
+    private Easy.TweenType m_TweenType = Easy.TweenType.Linear;
+    public Easy.TweenType tweenType { get { return m_TweenType; } set { m_TweenType = value; } }
 
     [SerializeField]
     private BeginSnapEvent m_OnBeginSnap = new BeginSnapEvent();
@@ -62,8 +66,9 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
 
     private bool m_Sanpping = false;
     private bool m_Dragging = false;
-    private float m_SmoothTime = 0.0f;
-    private Vector2 m_SnapPos = Vector2.zero;
+    private Vector2 m_SnapSrc = Vector2.zero;
+    private Vector2 m_SnapDst = Vector2.zero;
+    private float m_SnapTime = 0.0f;
 
     protected override void Awake()
     {
@@ -93,6 +98,8 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
             m_Sanpping = false;
             m_OnEndSnap.Invoke();
         }
+
+        m_Dragging = true;
     }
 
     public void OnBeginDrag(PointerEventData eventData)
@@ -175,7 +182,7 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
 
     void AutoSnap()
     {
-        if (!m_Sanpping && !scrollRect.content.anchoredPosition.Equals(m_SnapPos))
+        if (!m_Sanpping && !scrollRect.content.anchoredPosition.Equals(m_SnapDst))
         {
             UpdateSnapTarget();
         }
@@ -191,11 +198,11 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
             // skip inertia process until speed drops down to the threshold
             if (Mathf.Abs(scrollRect.velocity[scrollAxis]) < m_SpeedThreshold)
             {
-                // scrollRect.StopMovement();
+                scrollRect.StopMovement();
                 // TODO: clamp final pos within content bounds
-                var snapOffset = GetSnapOffset();
-                m_SnapPos = scrollRect.content.anchoredPosition + snapOffset;
-                m_SmoothTime = Mathf.Abs(snapOffset[scrollAxis] / Mathf.Max(1, m_SnapSpeed));
+                m_SnapSrc = scrollRect.content.anchoredPosition;
+                m_SnapDst = m_SnapSrc + GetSnapOffset();
+                m_SnapTime = 0.0f;
                 m_Sanpping = true;
                 m_OnBeginSnap.Invoke();
             }
@@ -209,24 +216,17 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
             m_OnSnap.Invoke();
 
             var scrollAxis = scrollRect.vertical ? 1 : 0;
-            var velocity = scrollRect.velocity;
-            float speed = velocity[scrollAxis];
+            m_SnapTime = Math.Min(m_SnapTime + Time.unscaledDeltaTime, m_SmoothTime);
 
             var position = scrollRect.content.anchoredPosition;
-            position[scrollAxis] = Mathf.SmoothDamp(scrollRect.content.anchoredPosition[scrollAxis], m_SnapPos[scrollAxis], ref speed, m_SmoothTime, Mathf.Infinity, Time.unscaledDeltaTime);
+            position[scrollAxis] = Easy.Tween(m_TweenType, m_SnapSrc[scrollAxis], m_SnapDst[scrollAxis], m_SnapTime / m_SmoothTime);
+            scrollRect.content.anchoredPosition = position;
 
-            if (Mathf.Abs(speed) < 1)
+            if (m_SnapTime >= m_SmoothTime)
             {
-                speed = 0;
-                position = m_SnapPos;
                 m_Sanpping = false;
                 m_OnEndSnap.Invoke();
             }
-
-            velocity[scrollAxis] = speed;
-
-            scrollRect.velocity = velocity;
-            scrollRect.content.anchoredPosition = position;
         }
     }
 
