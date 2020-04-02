@@ -45,8 +45,8 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
     public float speedThreshold { get { return m_SpeedThreshold; } set { m_SpeedThreshold = value; } }
 
     [SerializeField]
-    protected float m_SmoothTime = 0.1f;
-    public float smoothTime { get { return m_SmoothTime; } set { m_SmoothTime = value; } }
+    protected uint m_SnapSpeed = 1000;
+    public uint snapSpeed { get { return m_SnapSpeed; } set { m_SnapSpeed = value; } }
 
     [SerializeField]
     private BeginSnapEvent m_OnBeginSnap = new BeginSnapEvent();
@@ -62,9 +62,15 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
 
     private bool m_Sanpping = false;
     private bool m_Dragging = false;
+    private float m_SmoothTime = 0.0f;
     private Vector2 m_SnapPos = Vector2.zero;
 
     protected override void Awake()
+    {
+        Setup();
+    }
+
+    private void Setup()
     {
         if (scrollRect == null)
         {
@@ -167,29 +173,36 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
         return offset;
     }
 
-    void PrepareSnap()
+    void AutoSnap()
     {
         if (!m_Sanpping && !scrollRect.content.anchoredPosition.Equals(m_SnapPos))
         {
-            var scrollAxis = scrollRect.vertical ? 1 : 0;
-            var normalizedPositionOnScrollAxis = scrollRect.normalizedPosition[scrollAxis];
-            // skip elasticity process.
-            if (0.0f <= normalizedPositionOnScrollAxis && normalizedPositionOnScrollAxis <= 1.0f)
+            UpdateSnapTarget();
+        }
+    }
+
+    void UpdateSnapTarget()
+    {
+        var scrollAxis = scrollRect.vertical ? 1 : 0;
+        var normalizedPositionOnScrollAxis = scrollRect.normalizedPosition[scrollAxis];
+        // skip elasticity process.
+        if (0.0f <= normalizedPositionOnScrollAxis && normalizedPositionOnScrollAxis <= 1.0f)
+        {
+            // skip inertia process until speed drops down to the threshold
+            if (Mathf.Abs(scrollRect.velocity[scrollAxis]) < m_SpeedThreshold)
             {
-                // skip inertia process until speed drops down to the threshold
-                if (Mathf.Abs(scrollRect.velocity[scrollAxis]) < m_SpeedThreshold)
-                {
-                    // scrollRect.StopMovement();
-                    // TODO: clamp final pos within content bounds
-                    m_SnapPos = scrollRect.content.anchoredPosition + GetSnapOffset();
-                    m_Sanpping = true;
-                    m_OnBeginSnap.Invoke();
-                }
+                // scrollRect.StopMovement();
+                // TODO: clamp final pos within content bounds
+                var snapOffset = GetSnapOffset();
+                m_SnapPos = scrollRect.content.anchoredPosition + snapOffset;
+                m_SmoothTime = Mathf.Abs(snapOffset[scrollAxis] / Mathf.Max(1, m_SnapSpeed));
+                m_Sanpping = true;
+                m_OnBeginSnap.Invoke();
             }
         }
     }
 
-    void UpdateSnap()
+    void ProcessSnap()
     {
         if (m_Sanpping)
         {
@@ -225,8 +238,19 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
         if (m_Dragging) // skip while dragging.
             return;
 
-        PrepareSnap();
+        AutoSnap();
 
-        UpdateSnap();
+        ProcessSnap();
     }
+
+#if UNITY_EDITOR
+    protected override void OnValidate()
+    {
+        base.OnValidate();
+
+        Setup();
+
+        UpdateSnapTarget();
+    }
+#endif
 }
