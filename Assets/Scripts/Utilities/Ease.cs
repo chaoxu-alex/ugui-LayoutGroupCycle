@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-public static class Easy
+public static class Ease
 {
     static private Func<float, float, float, float>[] m_TweenFuncMap = null;
     /// <summary>

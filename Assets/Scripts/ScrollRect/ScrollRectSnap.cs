@@ -49,8 +49,8 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
     public float smoothTime { get { return m_SmoothTime; } set { m_SmoothTime = value; } }
 
     [SerializeField]
-    private Easy.TweenType m_TweenType = Easy.TweenType.Linear;
-    public Easy.TweenType tweenType { get { return m_TweenType; } set { m_TweenType = value; } }
+    private Ease.TweenType m_TweenType = Ease.TweenType.Linear;
+    public Ease.TweenType tweenType { get { return m_TweenType; } set { m_TweenType = value; } }
 
     [SerializeField]
     private BeginSnapEvent m_OnBeginSnap = new BeginSnapEvent();
@@ -219,7 +219,7 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
             m_SnapTime = Math.Min(m_SnapTime + Time.unscaledDeltaTime, m_SmoothTime);
 
             var position = scrollRect.content.anchoredPosition;
-            position[scrollAxis] = Easy.Tween(m_TweenType, m_SnapSrc[scrollAxis], m_SnapDst[scrollAxis], m_SnapTime / m_SmoothTime);
+            position[scrollAxis] = Ease.Tween(m_TweenType, m_SnapSrc[scrollAxis], m_SnapDst[scrollAxis], m_SnapTime / m_SmoothTime);
             scrollRect.content.anchoredPosition = position;
 
             if (m_SnapTime >= m_SmoothTime)
