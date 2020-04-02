@@ -1,95 +1,94 @@
 using System;
 using UnityEngine;
-using System.Collections.Generic;
 
 public static class Easy
 {
-    static private Dictionary<TweenType, Func<float, float, float, float>> m_TweenFuncMap = null;
+    static private Func<float, float, float, float>[] m_TweenFuncMap = null;
     /// <summary>
     /// The easing type
     /// </summary>
     [Serializable]
     public enum TweenType
     {
-        Immediate,
+        Instant,
         Linear,
         Spring,
-        easeInQuad,
-        easeOutQuad,
-        easeInOutQuad,
-        easeInCubic,
-        easeOutCubic,
-        easeInOutCubic,
-        easeInQuart,
-        easeOutQuart,
-        easeInOutQuart,
-        easeInQuint,
-        easeOutQuint,
-        easeInOutQuint,
-        easeInSine,
-        easeOutSine,
-        easeInOutSine,
-        easeInExpo,
-        easeOutExpo,
-        easeInOutExpo,
-        easeInCirc,
-        easeOutCirc,
-        easeInOutCirc,
-        easeInBounce,
-        easeOutBounce,
-        easeInOutBounce,
-        easeInBack,
-        easeOutBack,
-        easeInOutBack,
-        easeInElastic,
-        easeOutElastic,
-        easeInOutElastic
+        EaseInQuad,
+        EaseOutQuad,
+        EaseInOutQuad,
+        EaseInCubic,
+        EaseOutCubic,
+        EaseInOutCubic,
+        EaseInQuart,
+        EaseOutQuart,
+        EaseInOutQuart,
+        EaseInQuint,
+        EaseOutQuint,
+        EaseInOutQuint,
+        EaseInSine,
+        EaseOutSine,
+        EaseInOutSine,
+        EaseInExpo,
+        EaseOutExpo,
+        EaseInOutExpo,
+        EaseInCirc,
+        EaseOutCirc,
+        EaseInOutCirc,
+        EaseInBounce,
+        EaseOutBounce,
+        EaseInOutBounce,
+        EaseInBack,
+        EaseOutBack,
+        EaseInOutBack,
+        EaseInElastic,
+        EaseOutElastic,
+        EaseInOutElastic
     }
 
     public static float Tween(TweenType tweenType, float start, float end, float progress)
     {
         if (m_TweenFuncMap == null)
         {
-            m_TweenFuncMap = new Dictionary<TweenType, Func<float, float, float, float>>();
-            m_TweenFuncMap.Add(TweenType.Immediate, Immediate);
-            m_TweenFuncMap.Add(TweenType.Linear, Linear);
-            m_TweenFuncMap.Add(TweenType.Spring, Spring);
-            m_TweenFuncMap.Add(TweenType.easeInQuad, EaseInQuad);
-            m_TweenFuncMap.Add(TweenType.easeOutQuad, EaseOutQuad);
-            m_TweenFuncMap.Add(TweenType.easeInOutQuad, EaseInOutQuad);
-            m_TweenFuncMap.Add(TweenType.easeInCubic, EaseInCubic);
-            m_TweenFuncMap.Add(TweenType.easeOutCubic, EaseOutCubic);
-            m_TweenFuncMap.Add(TweenType.easeInOutCubic, EaseInOutCubic);
-            m_TweenFuncMap.Add(TweenType.easeInQuart, EaseInQuart);
-            m_TweenFuncMap.Add(TweenType.easeOutQuart, EaseOutQuart);
-            m_TweenFuncMap.Add(TweenType.easeInOutQuart, EaseInOutQuart);
-            m_TweenFuncMap.Add(TweenType.easeInQuint, EaseInQuint);
-            m_TweenFuncMap.Add(TweenType.easeOutQuint, EaseOutQuint);
-            m_TweenFuncMap.Add(TweenType.easeInOutQuint, EaseInOutQuint);
-            m_TweenFuncMap.Add(TweenType.easeInSine, EaseInSine);
-            m_TweenFuncMap.Add(TweenType.easeOutSine, EaseOutSine);
-            m_TweenFuncMap.Add(TweenType.easeInOutSine, EaseInOutSine);
-            m_TweenFuncMap.Add(TweenType.easeInExpo, EaseInExpo);
-            m_TweenFuncMap.Add(TweenType.easeOutExpo, EaseOutExpo);
-            m_TweenFuncMap.Add(TweenType.easeInOutExpo, EaseInOutExpo);
-            m_TweenFuncMap.Add(TweenType.easeInCirc, EaseInCirc);
-            m_TweenFuncMap.Add(TweenType.easeOutCirc, EaseOutCirc);
-            m_TweenFuncMap.Add(TweenType.easeInOutCirc, EaseInOutCirc);
-            m_TweenFuncMap.Add(TweenType.easeInBounce, EaseInBounce);
-            m_TweenFuncMap.Add(TweenType.easeOutBounce, EaseOutBounce);
-            m_TweenFuncMap.Add(TweenType.easeInOutBounce, EaseInOutBounce);
-            m_TweenFuncMap.Add(TweenType.easeInBack, EaseInBack);
-            m_TweenFuncMap.Add(TweenType.easeOutBack, EaseOutBack);
-            m_TweenFuncMap.Add(TweenType.easeInOutBack, EaseInOutBack);
-            m_TweenFuncMap.Add(TweenType.easeInElastic, EaseInElastic);
-            m_TweenFuncMap.Add(TweenType.easeOutElastic, EaseOutElastic);
-            m_TweenFuncMap.Add(TweenType.easeInOutElastic, EaseInOutElastic);
+            m_TweenFuncMap = new Func<float, float, float, float>[(int)TweenType.EaseInOutElastic + 1];
+            m_TweenFuncMap[(int)TweenType.Instant] = Instant;
+            m_TweenFuncMap[(int)TweenType.Linear] = Linear;
+            m_TweenFuncMap[(int)TweenType.Spring] = Spring;
+            m_TweenFuncMap[(int)TweenType.EaseInQuad] = EaseInQuad;
+            m_TweenFuncMap[(int)TweenType.EaseOutQuad] = EaseOutQuad;
+            m_TweenFuncMap[(int)TweenType.EaseInOutQuad] = EaseInOutQuad;
+            m_TweenFuncMap[(int)TweenType.EaseInCubic] = EaseInCubic;
+            m_TweenFuncMap[(int)TweenType.EaseOutCubic] = EaseOutCubic;
+            m_TweenFuncMap[(int)TweenType.EaseInOutCubic] = EaseInOutCubic;
+            m_TweenFuncMap[(int)TweenType.EaseInQuart] = EaseInQuart;
+            m_TweenFuncMap[(int)TweenType.EaseOutQuart] = EaseOutQuart;
+            m_TweenFuncMap[(int)TweenType.EaseInOutQuart] = EaseInOutQuart;
+            m_TweenFuncMap[(int)TweenType.EaseInQuint] = EaseInQuint;
+            m_TweenFuncMap[(int)TweenType.EaseOutQuint] = EaseOutQuint;
+            m_TweenFuncMap[(int)TweenType.EaseInOutQuint] = EaseInOutQuint;
+            m_TweenFuncMap[(int)TweenType.EaseInSine] = EaseInSine;
+            m_TweenFuncMap[(int)TweenType.EaseOutSine] = EaseOutSine;
+            m_TweenFuncMap[(int)TweenType.EaseInOutSine] = EaseInOutSine;
+            m_TweenFuncMap[(int)TweenType.EaseInExpo] = EaseInExpo;
+            m_TweenFuncMap[(int)TweenType.EaseOutExpo] = EaseOutExpo;
+            m_TweenFuncMap[(int)TweenType.EaseInOutExpo] = EaseInOutExpo;
+            m_TweenFuncMap[(int)TweenType.EaseInCirc] = EaseInCirc;
+            m_TweenFuncMap[(int)TweenType.EaseOutCirc] = EaseOutCirc;
+            m_TweenFuncMap[(int)TweenType.EaseInOutCirc] = EaseInOutCirc;
+            m_TweenFuncMap[(int)TweenType.EaseInBounce] = EaseInBounce;
+            m_TweenFuncMap[(int)TweenType.EaseOutBounce] = EaseOutBounce;
+            m_TweenFuncMap[(int)TweenType.EaseInOutBounce] = EaseInOutBounce;
+            m_TweenFuncMap[(int)TweenType.EaseInBack] = EaseInBack;
+            m_TweenFuncMap[(int)TweenType.EaseOutBack] = EaseOutBack;
+            m_TweenFuncMap[(int)TweenType.EaseInOutBack] = EaseInOutBack;
+            m_TweenFuncMap[(int)TweenType.EaseInElastic] = EaseInElastic;
+            m_TweenFuncMap[(int)TweenType.EaseOutElastic] = EaseOutElastic;
+            m_TweenFuncMap[(int)TweenType.EaseInOutElastic] = EaseInOutElastic;
         }
 
-        return m_TweenFuncMap[tweenType](start, end, progress);
+        return m_TweenFuncMap[(int)tweenType](start, end, progress);
     }
 
-    private static float Immediate(float start, float end, float val)
+    private static float Instant(float start, float end, float val)
     {
         return end;
     }
