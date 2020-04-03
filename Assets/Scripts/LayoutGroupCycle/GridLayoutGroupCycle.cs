@@ -123,42 +123,48 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
         }
     }
 
-    public void Locate(uint index)
+    public void Locate(uint index, bool includeSpacing = true)
     {
         if (scrollRect.horizontal)
         {
-            LocateAlongAxis(0, index);
+            LocateAlongAxis(0, index, includeSpacing);
         }
         else if (scrollRect.vertical)
         {
-            LocateAlongAxis(1, index);
+            LocateAlongAxis(1, index, includeSpacing);
         }
     }
 
-    protected void LocateAlongAxis(int axis, uint index)
+    protected void LocateAlongAxis(int axis, uint index, bool includeSpacing)
     {
         if (m_CellPosMap != null && index < m_CellPosMap.Length)
         {
-            var contentSize = rectTransform.rect.size[axis];
-            var viewSize = scrollRect.viewport.rect.size[axis];
-            var scrollSize = Mathf.Max(0, contentSize - viewSize);
-            var viewMin = (axis == 0 ? scrollRect.normalizedPosition[axis] : 1 - scrollRect.normalizedPosition[axis]) * scrollSize;
-            var viewMax = viewMin + viewSize;
             var cellPos = m_CellPosMap[index];
-
-            var normalizedPosition = scrollRect.normalizedPosition;
-            if (cellPos[axis] < viewMin)
+            cellPos.y = -cellPos.y - cellSize.y; // y grows downwards vertically.
+            Rect cellRect = new Rect(cellPos, cellSize);
+            if (includeSpacing)
             {
-                normalizedPosition[axis] = cellPos[axis] / scrollSize;
-                if (axis == 1) normalizedPosition[axis] = 1 - normalizedPosition[axis];
-            }
-            else if (cellPos[axis] + cellSize[axis] > viewMax)
-            {
-                normalizedPosition[axis] = (cellPos[axis] + cellSize[axis] - viewSize) / scrollSize;
-                if (axis == 1) normalizedPosition[axis] = 1 - normalizedPosition[axis];
+                // clamp within rect size since spacing on edge cell may excced the boundary when padding is less that spacing.
+                cellRect.xMin = Mathf.Clamp(cellRect.xMin - spacing.x, rectTransform.rect.xMin, rectTransform.rect.xMax);
+                cellRect.xMax = Mathf.Clamp(cellRect.xMax + spacing.x, rectTransform.rect.xMin, rectTransform.rect.xMax);
+                cellRect.yMin = Mathf.Clamp(cellRect.yMin - spacing.y, rectTransform.rect.yMin, rectTransform.rect.yMax);
+                cellRect.yMax = Mathf.Clamp(cellRect.yMax + spacing.y, rectTransform.rect.yMin, rectTransform.rect.yMax);
             }
 
-            scrollRect.normalizedPosition = normalizedPosition;
+            var cellMinInView = scrollRect.viewport.InverseTransformPoint(rectTransform.TransformPoint(cellRect.min));
+            var cellMaxInView = scrollRect.viewport.InverseTransformPoint(rectTransform.TransformPoint(cellRect.max));
+
+            Vector2 offset = Vector2.zero;
+            var viewRect = scrollRect.viewport.rect;
+            if (cellMinInView[axis] < viewRect.min[axis])
+            {
+                offset[axis] = viewRect.min[axis] - cellMinInView[axis];
+            }
+            else if (cellMaxInView[axis] > viewRect.max[axis])
+            {
+                offset[axis] = viewRect.max[axis] - cellMaxInView[axis];
+            }
+            rectTransform.anchoredPosition += offset;
         }
     }
 
@@ -180,25 +186,23 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
         UpdateChildren();
 
         int minColumns = 0;
-        int preferredColumns = 0;
         if (m_Constraint == Constraint.FixedColumnCount)
         {
-            minColumns = preferredColumns = m_ConstraintCount;
+            minColumns = m_ConstraintCount;
         }
         else if (m_Constraint == Constraint.FixedRowCount)
         {
-            minColumns = preferredColumns = Mathf.CeilToInt(size / (float)m_ConstraintCount - 0.001f);
+            minColumns = Mathf.CeilToInt(size / (float)m_ConstraintCount - 0.001f);
         }
         else
         {
-            minColumns = 1;
-            preferredColumns = Mathf.CeilToInt(Mathf.Sqrt(size));
+            float height = rectTransform.rect.height;
+            int cellCountY = Mathf.Max(1, Mathf.FloorToInt((height - padding.vertical + spacing.y + 0.001f) / (cellSize.y + spacing.y)));
+            minColumns = Mathf.CeilToInt(size / (float)cellCountY);
         }
 
-        SetLayoutInputForAxis(
-            padding.horizontal + (cellSize.x + spacing.x) * minColumns - spacing.x,
-            padding.horizontal + (cellSize.x + spacing.x) * preferredColumns - spacing.x,
-            -1, 0);
+        float minSpace = padding.horizontal + (cellSize.x + spacing.x) * minColumns - spacing.x;
+        SetLayoutInputForAxis(minSpace, minSpace, -1, 0);
     }
 
     protected void UpdateChildren()

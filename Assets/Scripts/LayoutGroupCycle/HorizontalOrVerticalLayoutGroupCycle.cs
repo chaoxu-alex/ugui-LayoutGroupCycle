@@ -95,32 +95,39 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
 
     public abstract void ResetPosition();
 
-    public abstract void Locate(uint index);
+    public abstract void Locate(uint index, bool includeSpacing = true);
 
-    protected void LocateAlongAxis(int axis, uint index)
+    protected void LocateAlongAxis(int axis, uint index, bool includeSpacing)
     {
         if (m_CellInfoMap != null && index < m_CellInfoMap.Length)
         {
-            var contentSize = rectTransform.rect.size[axis];
-            var viewSize = scrollRect.viewport.rect.size[axis];
-            var scrollSize = Mathf.Max(0, contentSize - viewSize);
-            var viewMin = m_NormalizedPosition[axis] * scrollSize;
-            var viewMax = viewMin + viewSize;
             var cellInfo = m_CellInfoMap[index];
-
-            var normalizedPosition = scrollRect.normalizedPosition;
-            if (cellInfo.pos[axis] < viewMin)
+            var cellPos = cellInfo.pos;
+            cellPos.y = -cellPos.y - cellInfo.size.y; // y grows downwards vertically.
+            Rect cellRect = new Rect(cellPos, cellInfo.size);
+            if (includeSpacing)
             {
-                normalizedPosition[axis] = cellInfo.pos[axis] / scrollSize;
-                if (axis == 1) normalizedPosition[axis] = 1 - normalizedPosition[axis];
-            }
-            else if (cellInfo.pos[axis] + cellInfo.size[axis] > viewMax)
-            {
-                normalizedPosition[axis] = (cellInfo.pos[axis] + cellInfo.size[axis] - viewSize) / scrollSize;
-                if (axis == 1) normalizedPosition[axis] = 1 - normalizedPosition[axis];
+                // clamp within rect size since spacing on edge cell may excced the boundary when padding is less that spacing.
+                cellRect.xMin = Mathf.Clamp(cellRect.xMin - spacing, rectTransform.rect.xMin, rectTransform.rect.xMax);
+                cellRect.xMax = Mathf.Clamp(cellRect.xMax + spacing, rectTransform.rect.xMin, rectTransform.rect.xMax);
+                cellRect.yMin = Mathf.Clamp(cellRect.yMin - spacing, rectTransform.rect.yMin, rectTransform.rect.yMax);
+                cellRect.yMax = Mathf.Clamp(cellRect.yMax + spacing, rectTransform.rect.yMin, rectTransform.rect.yMax);
             }
 
-            scrollRect.normalizedPosition = normalizedPosition;
+            var cellMinInView = scrollRect.viewport.InverseTransformPoint(rectTransform.TransformPoint(cellRect.min));
+            var cellMaxInView = scrollRect.viewport.InverseTransformPoint(rectTransform.TransformPoint(cellRect.max));
+
+            Vector2 offset = Vector2.zero;
+            var viewRect = scrollRect.viewport.rect;
+            if (cellMinInView[axis] < viewRect.min[axis])
+            {
+                offset[axis] = viewRect.min[axis] - cellMinInView[axis];
+            }
+            else if (cellMaxInView[axis] > viewRect.max[axis])
+            {
+                offset[axis] = viewRect.max[axis] - cellMaxInView[axis];
+            }
+            rectTransform.anchoredPosition += offset;
         }
     }
 

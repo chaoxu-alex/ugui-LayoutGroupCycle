@@ -10,5 +10,5 @@ public interface ILayoutGroupCycle
 
     void ResetPosition();
 
-    void Locate(uint index);
+    void Locate(uint index, bool includeSpacing = true);
 }

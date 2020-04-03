@@ -44,9 +44,9 @@ public class VerticalLayoutGroupCycle : HorizontalOrVerticalLayoutGroupCycle
         }
     }
 
-    public override void Locate(uint index)
+    public override void Locate(uint index, bool includeSpacing = true)
     {
-        LocateAlongAxis(1, index);
+        LocateAlongAxis(1, index, includeSpacing);
     }
 
     public override void CalculateLayoutInputHorizontal()
