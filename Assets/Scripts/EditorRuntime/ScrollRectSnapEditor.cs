@@ -3,8 +3,8 @@ using UnityEditor.AnimatedValues;
 using UnityEngine.UI;
 
 [CanEditMultipleObjects]
-[CustomEditor(typeof(ScrollRectSnap), true)]
-public class ScrollRectSnapEditor : Editor
+[CustomEditor(typeof(ScrollRectControl), true)]
+public class ScrollRectControlEditor : Editor
 {
     SerializedProperty m_ScrollRect;
     SerializedProperty m_TargetParent;

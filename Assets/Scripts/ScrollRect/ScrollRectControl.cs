@@ -6,7 +6,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 [RequireComponent(typeof(ScrollRect))]
-public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
+public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     [Serializable]
     public class EndSnapEvent : UnityEvent { }
@@ -140,7 +140,7 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
     }
 
     // for LayoutGroupCycles that doesn't have all the children RectTransform on the fly.
-    public Vector2 GetRelativePosition(RectTransform reference, Rect rect, Matrix4x4 toWorldMatrix, float pivot, int offset)
+    protected Vector2 GetRelativePosition(RectTransform reference, Rect rect, Matrix4x4 toWorldMatrix, float pivot, int offset)
     {
         var xPos = Mathf.Lerp(rect.xMin, rect.xMax, pivot) + offset;
         var yPos = Mathf.Lerp(rect.yMin, rect.yMax, pivot) + offset;
@@ -148,7 +148,7 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
     }
 
     // get position after offset relative to reference RectTransform
-    public Vector2 GetRelativePosition(RectTransform reference, RectTransform target, float pivot, int offset)
+    protected Vector2 GetRelativePosition(RectTransform reference, RectTransform target, float pivot, int offset)
     {
         var xPos = Mathf.Lerp(target.rect.xMin, target.rect.xMax, pivot) + offset;
         var yPos = Mathf.Lerp(target.rect.yMin, target.rect.yMax, pivot) + offset;
