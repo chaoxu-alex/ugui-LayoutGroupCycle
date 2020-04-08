@@ -207,14 +207,46 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
     public void SnapRelative(Vector2 offset)
     {
         scrollRect.StopMovement();
+
         m_SnapSrc = scrollRect.content.anchoredPosition;
-        m_SnapDst = m_SnapSrc + offset;
         if (clampWithinContent)
         {
-            // TODO: clamp final pos within content rect
+            offset = ClampSnapOffset(offset);
         }
+        m_SnapDst = m_SnapSrc + offset;
         m_SnapTime = 0.0f;
         m_Sanpping = true;
+    }
+
+    protected Vector2 ClampSnapOffset(Vector2 offset)
+    {
+        var contentRect = scrollRect.content.rect;
+        contentRect.position += offset;
+        var minInViewRect = scrollRect.viewport.InverseTransformPoint(scrollRect.content.TransformPoint(contentRect.min));
+        var maxInViewRect = scrollRect.viewport.InverseTransformPoint(scrollRect.content.TransformPoint(contentRect.max));
+
+        var fixOffset = Vector2.zero;
+        var viewRect = scrollRect.viewport.rect;
+        if (minInViewRect.x > viewRect.min.x && maxInViewRect.x > viewRect.max.x)
+        {
+            fixOffset.x = Mathf.Max(viewRect.min.x - minInViewRect.x, viewRect.max.x - maxInViewRect.x);
+        }
+        else if (minInViewRect.x < viewRect.min.x && maxInViewRect.x < viewRect.max.x)
+        {
+            fixOffset.x = Mathf.Min(viewRect.min.x - minInViewRect.x, viewRect.max.x - maxInViewRect.x);
+        }
+
+        if (minInViewRect.y > viewRect.min.y && maxInViewRect.y > viewRect.max.y)
+        {
+            fixOffset.y = Mathf.Max(viewRect.min.y - minInViewRect.y, viewRect.max.y - maxInViewRect.y);
+        }
+        else if (minInViewRect.y < viewRect.min.y && maxInViewRect.y < viewRect.max.y)
+        {
+            fixOffset.y = Mathf.Min(viewRect.min.y - minInViewRect.y, viewRect.max.y - maxInViewRect.y);
+        }
+        offset += fixOffset;
+
+        return offset;
     }
 
     public void SnapTo(uint index)
@@ -235,7 +267,6 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
             if (cellRect != null)
             {
                 var targetSnapPos = GetRelativePosition(scrollRect.content, cellRect.Value, parent.localToWorldMatrix, targetSnapPivot, targetSnapOffset);
-                // TODO: clamp snap pos within content rect.
                 offset[scrollAxis] = viewSnapPos[scrollAxis] - targetSnapPos[scrollAxis];
             }
         }
@@ -277,7 +308,6 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
             {
                 var target = rectChildren[(int)index];
                 var targetSnapPos = GetRelativePosition(scrollRect.content, target, targetSnapPivot, targetSnapOffset);
-                // TODO: clamp snap pos within content rect
                 offset[scrollAxis] = viewSnapPos[scrollAxis] - targetSnapPos[scrollAxis];
             }
         }
