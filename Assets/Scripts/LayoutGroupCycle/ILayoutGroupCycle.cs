@@ -8,7 +8,5 @@ public interface ILayoutGroupCycle
 
     void Populate();
 
-    void ResetPosition();
-
-    void Locate(uint index, bool includeSpacing = true);
+    Rect? GetCellRect(uint index);
 }

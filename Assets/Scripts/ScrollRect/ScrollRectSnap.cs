@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
@@ -8,10 +9,6 @@ using UnityEngine.UI;
 public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     [Serializable]
-    public class BeginSnapEvent : UnityEvent { }
-    [Serializable]
-    public class SnapEvent : UnityEvent { }
-    [Serializable]
     public class EndSnapEvent : UnityEvent { }
 
     [SerializeField]
@@ -19,46 +16,50 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
     public ScrollRect scrollRect { get { return m_ScrollRect; } set { m_ScrollRect = value; } }
 
     [SerializeField]
-    protected RectTransform m_ChildrenRoot;
-    public RectTransform childrenRoot { get { return m_ChildrenRoot; } set { m_ChildrenRoot = value; } }
+    protected RectTransform m_TargetParent;
+    public RectTransform targetParent { get { return m_TargetParent; } set { m_TargetParent = value; } }
 
     [SerializeField]
     [Range(0f, 1f)]
-    protected float m_ViewOffset = 0.5f;
-    public float viewOffset { get { return m_ViewOffset; } set { m_ViewOffset = Mathf.Clamp01(value); } }
+    protected float m_ViewSnapPivot = 0.5f;
+    public float viewSnapPivot { get { return m_ViewSnapPivot; } set { m_ViewSnapPivot = Mathf.Clamp01(value); } }
 
     [SerializeField]
-    protected int m_ViewOffsetPixel = 0;
-    public int viewOffsetPixel { get { return m_ViewOffsetPixel; } set { m_ViewOffsetPixel = value; } }
+    [Tooltip("Offet in pixel relative to view snap pivot.")]
+    protected int m_ViewSnapOffset = 0;
+    public int viewSnapOffset { get { return m_ViewSnapOffset; } set { m_ViewSnapOffset = value; } }
 
     [SerializeField]
     [Range(0f, 1f)]
-    protected float m_ChildOffset = 0.5f;
-    public float childOffset { get { return m_ChildOffset; } set { m_ChildOffset = Mathf.Clamp01(value); } }
+    protected float m_TargetSnapPivot = 0.5f;
+    public float targetSnapPivot { get { return m_TargetSnapPivot; } set { m_TargetSnapPivot = Mathf.Clamp01(value); } }
 
     [SerializeField]
-    protected int m_ChildOffsetPixel = 0;
-    public int childOffsetPixel { get { return m_ChildOffsetPixel; } set { m_ChildOffsetPixel = value; } }
-
-    [SerializeField]
-    protected float m_SpeedThreshold = 500.0f;
-    public float speedThreshold { get { return m_SpeedThreshold; } set { m_SpeedThreshold = value; } }
+    [Tooltip("Offet in pixel relative to target snap pivot.")]
+    protected int m_TargetSnapOffset = 0;
+    public int targetSnapOffset { get { return m_TargetSnapOffset; } set { m_TargetSnapOffset = value; } }
 
     [SerializeField]
     protected float m_SmoothTime = 0.1f;
     public float smoothTime { get { return m_SmoothTime; } set { m_SmoothTime = value; } }
 
     [SerializeField]
-    private Ease.TweenType m_TweenType = Ease.TweenType.Linear;
+    protected Ease.TweenType m_TweenType = Ease.TweenType.Linear;
     public Ease.TweenType tweenType { get { return m_TweenType; } set { m_TweenType = value; } }
 
     [SerializeField]
-    private BeginSnapEvent m_OnBeginSnap = new BeginSnapEvent();
-    public BeginSnapEvent onBeginSnap { get { return m_OnBeginSnap; } set { m_OnBeginSnap = value; } }
+    protected bool m_ClampWithinContent = true;
+    public bool clampWithinContent { get { return m_ClampWithinContent; } set { m_ClampWithinContent = value; } }
 
     [SerializeField]
-    private SnapEvent m_OnSnap = new SnapEvent();
-    public SnapEvent onSnap { get { return m_OnSnap; } set { m_OnSnap = value; } }
+    [Tooltip("Automatically snap to nearest target.")]
+    protected bool m_AutoSnap = true;
+    public bool autoSnap { get { return m_AutoSnap; } set { m_AutoSnap = value; } }
+
+    [SerializeField]
+    [Tooltip("ScrollRect speed underwhich which snap will cut in.")]
+    protected float m_CutInSpeed = 500.0f;
+    public float cutInSpeed { get { return m_CutInSpeed; } set { m_CutInSpeed = value; } }
 
     [SerializeField]
     private EndSnapEvent m_OnEndSnap = new EndSnapEvent();
@@ -82,9 +83,9 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
             scrollRect = GetComponent<ScrollRect>();
         }
 
-        if (childrenRoot == null && scrollRect != null)
+        if (targetParent == null && scrollRect != null)
         {
-            childrenRoot = scrollRect.content;
+            targetParent = scrollRect.content;
         }
     }
 
@@ -138,83 +139,156 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
         return base.IsActive() && m_ScrollRect != null;
     }
 
-    protected virtual Vector2 GetSnapOffset()
+    // for LayoutGroupCycles that doesn't have all the children RectTransform on the fly.
+    public Vector2 GetRelativePosition(RectTransform reference, Rect rect, Matrix4x4 toWorldMatrix, float pivot, int offset)
     {
-        Vector2 offset = Vector2.zero;
+        var xPos = Mathf.Lerp(rect.xMin, rect.xMax, pivot) + offset;
+        var yPos = Mathf.Lerp(rect.yMin, rect.yMax, pivot) + offset;
+        return reference.InverseTransformPoint(toWorldMatrix.MultiplyPoint3x4(new Vector3(xPos, yPos)));
+    }
 
-        if (scrollRect != null)
+    // get position after offset relative to reference RectTransform
+    public Vector2 GetRelativePosition(RectTransform reference, RectTransform target, float pivot, int offset)
+    {
+        var xPos = Mathf.Lerp(target.rect.xMin, target.rect.xMax, pivot) + offset;
+        var yPos = Mathf.Lerp(target.rect.yMin, target.rect.yMax, pivot) + offset;
+        return reference.InverseTransformPoint(target.TransformPoint(new Vector3(xPos, yPos)));
+    }
+
+    // get snap offset of the nearest target under targetParent/scrollRect.content
+    protected Vector2 GetSnapOffsetToNearestTarget()
+    {
+        Vector2 result = Vector2.zero;
+
+        Vector2 viewSnapPos = GetRelativePosition(scrollRect.content, scrollRect.viewport, viewSnapPivot, viewSnapOffset);
+        var minDistance = float.MaxValue;
+        var scrollAxis = scrollRect.vertical ? 1 : 0;
+        foreach (RectTransform target in targetParent ?? scrollRect.content)
+        {
+            if (target.gameObject.activeSelf)
+            {
+                var targetSnapPos = GetRelativePosition(scrollRect.content, target, targetSnapPivot, targetSnapOffset);
+
+                var offset = viewSnapPos[scrollAxis] - targetSnapPos[scrollAxis];
+                var distance = Mathf.Abs(offset);
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    result[scrollAxis] = offset;
+                }
+            }
+        }
+
+        // no active child was found under targetParent/scrollRect.content, fallback to targetParent/scrollRect.content
+        if (minDistance >= float.MaxValue)
+        {
+            var targetSnapPos = GetRelativePosition(scrollRect.content, targetParent ?? scrollRect.content, targetSnapPivot, targetSnapOffset);
+            result[scrollAxis] = viewSnapPos[scrollAxis] - targetSnapPos[scrollAxis];
+        }
+
+        return result;
+    }
+
+    protected void AutoSnap()
+    {
+        if (m_AutoSnap && !m_Sanpping && !scrollRect.content.anchoredPosition.Equals(m_SnapDst))
         {
             var scrollAxis = scrollRect.vertical ? 1 : 0;
-
-            var view = scrollRect.viewport;
-            var viewBounds = new Bounds(view.rect.center, view.rect.size);
-            var snapViewX = Mathf.Lerp(viewBounds.min.x, viewBounds.max.x, m_ViewOffset);
-            var snapViewY = Mathf.Lerp(viewBounds.min.y, viewBounds.max.y, m_ViewOffset);
-            var snapViewPos = new Vector3(snapViewX, snapViewY, 0.0f);
-            var snapViewWorldPos = view.TransformPoint(snapViewPos);
-
-            var content = scrollRect.content;
-            var snapViewOffsetContent = content.InverseTransformPoint(snapViewWorldPos);
-            snapViewOffsetContent[scrollAxis] += viewOffsetPixel;
-
-            var minDistance = float.MaxValue;
-            foreach (RectTransform child in childrenRoot ?? content)
+            var normalizedPositionOnScrollAxis = scrollRect.normalizedPosition[scrollAxis];
+            var isNotElasticProcessing = scrollRect.movementType != ScrollRect.MovementType.Elastic || 0.0f <= normalizedPositionOnScrollAxis && normalizedPositionOnScrollAxis <= 1.0f;
+            // // skip elasticity process; skip inertia process until speed drops down to the threshold
+            if (isNotElasticProcessing && Mathf.Abs(scrollRect.velocity[scrollAxis]) < m_CutInSpeed)
             {
-                if (child.gameObject.activeSelf)
+                SnapRelative(GetSnapOffsetToNearestTarget());
+            }
+        }
+    }
+
+    public void SnapRelative(Vector2 offset)
+    {
+        scrollRect.StopMovement();
+        m_SnapSrc = scrollRect.content.anchoredPosition;
+        m_SnapDst = m_SnapSrc + offset;
+        if (clampWithinContent)
+        {
+            // TODO: clamp final pos within content rect
+        }
+        m_SnapTime = 0.0f;
+        m_Sanpping = true;
+    }
+
+    public void SnapTo(uint index)
+    {
+        SnapRelative(GetSnapOffsetByIndex(index));
+    }
+
+    protected Vector2 GetSnapOffsetByIndex(uint index)
+    {
+        var offset = Vector2.zero;
+        var scrollAxis = scrollRect.vertical ? 1 : 0;
+        Vector2 viewSnapPos = GetRelativePosition(scrollRect.content, scrollRect.viewport, viewSnapPivot, viewSnapOffset);
+        var parent = targetParent ?? scrollRect.content;
+        var layoutGroupCycle = parent.GetComponent<ILayoutGroupCycle>();
+        if (layoutGroupCycle != null)
+        {
+            Rect? cellRect = layoutGroupCycle.GetCellRect(index);
+            if (cellRect != null)
+            {
+                var targetSnapPos = GetRelativePosition(scrollRect.content, cellRect.Value, parent.localToWorldMatrix, targetSnapPivot, targetSnapOffset);
+                // TODO: clamp snap pos within content rect.
+                offset[scrollAxis] = viewSnapPos[scrollAxis] - targetSnapPos[scrollAxis];
+            }
+        }
+        else
+        {
+            var layoutGroup = parent.GetComponent<LayoutGroup>();
+            var rectChildren = new List<RectTransform>();
+            var toIgnoreList = ListPool<Component>.Get();
+            for (int i = 0; i < parent.childCount; i++)
+            {
+                var rect = parent.GetChild(i) as RectTransform;
+                if (rect == null || !rect.gameObject.activeInHierarchy)
+                    continue;
+
+                if (layoutGroup != null)
                 {
-                    var snapChildX = Mathf.Lerp(child.rect.min.x, child.rect.max.x, m_ChildOffset);
-                    var snapChildY = Mathf.Lerp(child.rect.min.y, child.rect.max.y, m_ChildOffset);
-                    var snapChildPos = new Vector3(snapChildX, snapChildY);
-                    var snapChildOffsetContent = content.InverseTransformPoint(child.TransformPoint(snapChildPos));
-                    snapChildOffsetContent[scrollAxis] += childOffsetPixel;
-                    var distance = Mathf.Abs(snapViewOffsetContent[scrollAxis] - snapChildOffsetContent[scrollAxis]);
-                    if (distance < minDistance)
+                    rect.GetComponents(typeof(ILayoutIgnorer), toIgnoreList);
+                }
+
+                if (layoutGroup == null || toIgnoreList.Count == 0)
+                {
+                    rectChildren.Add(rect);
+                    continue;
+                }
+
+                for (int j = 0; j < toIgnoreList.Count; j++)
+                {
+                    var ignorer = (ILayoutIgnorer)toIgnoreList[j];
+                    if (!ignorer.ignoreLayout)
                     {
-                        minDistance = distance;
-                        offset[scrollAxis] = snapViewOffsetContent[scrollAxis] - snapChildOffsetContent[scrollAxis];
+                        rectChildren.Add(rect);
+                        break;
                     }
                 }
+            }
+            ListPool<Component>.Release(toIgnoreList);
+
+            if (index < rectChildren.Count)
+            {
+                var target = rectChildren[(int)index];
+                var targetSnapPos = GetRelativePosition(scrollRect.content, target, targetSnapPivot, targetSnapOffset);
+                // TODO: clamp snap pos within content rect
+                offset[scrollAxis] = viewSnapPos[scrollAxis] - targetSnapPos[scrollAxis];
             }
         }
 
         return offset;
     }
 
-    void AutoSnap()
-    {
-        if (!m_Sanpping && !scrollRect.content.anchoredPosition.Equals(m_SnapDst))
-        {
-            UpdateSnapTarget();
-        }
-    }
-
-    void UpdateSnapTarget()
-    {
-        var scrollAxis = scrollRect.vertical ? 1 : 0;
-        var normalizedPositionOnScrollAxis = scrollRect.normalizedPosition[scrollAxis];
-        // skip elasticity process.
-        if (0.0f <= normalizedPositionOnScrollAxis && normalizedPositionOnScrollAxis <= 1.0f)
-        {
-            // skip inertia process until speed drops down to the threshold
-            if (Mathf.Abs(scrollRect.velocity[scrollAxis]) < m_SpeedThreshold)
-            {
-                scrollRect.StopMovement();
-                // TODO: clamp final pos within content bounds
-                m_SnapSrc = scrollRect.content.anchoredPosition;
-                m_SnapDst = m_SnapSrc + GetSnapOffset();
-                m_SnapTime = 0.0f;
-                m_Sanpping = true;
-                m_OnBeginSnap.Invoke();
-            }
-        }
-    }
-
     void ProcessSnap()
     {
         if (m_Sanpping)
         {
-            m_OnSnap.Invoke();
-
             var scrollAxis = scrollRect.vertical ? 1 : 0;
             m_SnapTime = Math.Min(m_SnapTime + Time.unscaledDeltaTime, m_SmoothTime);
 
@@ -250,7 +324,10 @@ public class ScrollRectSnap : UIBehaviour, IInitializePotentialDragHandler, IBeg
 
         Setup();
 
-        UpdateSnapTarget();
+        if (m_AutoSnap)
+        {
+            SnapRelative(GetSnapOffsetToNearestTarget());
+        }
     }
 #endif
 }

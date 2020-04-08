@@ -89,46 +89,23 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
             }
         }
 
-        //SetDirty();
+        // force layout rebuilt immediate instead of SetDirty() to ensure cells get updated this frame.
         LayoutRebuilder.ForceRebuildLayoutImmediate(rectTransform);
     }
 
-    public abstract void ResetPosition();
-
-    public abstract void Locate(uint index, bool includeSpacing = true);
-
-    protected void LocateAlongAxis(int axis, uint index, bool includeSpacing)
+    public Rect? GetCellRect(uint index)
     {
+        Rect? cellRect = null;
+
         if (m_CellInfoMap != null && index < m_CellInfoMap.Length)
         {
-            var cellInfo = m_CellInfoMap[index];
-            var cellPos = cellInfo.pos;
-            cellPos.y = -cellPos.y - cellInfo.size.y; // y grows downwards vertically.
-            Rect cellRect = new Rect(cellPos, cellInfo.size);
-            if (includeSpacing)
-            {
-                // clamp within rect size since spacing on edge cell may excced the boundary when padding is less that spacing.
-                cellRect.xMin = Mathf.Clamp(cellRect.xMin - spacing, rectTransform.rect.xMin, rectTransform.rect.xMax);
-                cellRect.xMax = Mathf.Clamp(cellRect.xMax + spacing, rectTransform.rect.xMin, rectTransform.rect.xMax);
-                cellRect.yMin = Mathf.Clamp(cellRect.yMin - spacing, rectTransform.rect.yMin, rectTransform.rect.yMax);
-                cellRect.yMax = Mathf.Clamp(cellRect.yMax + spacing, rectTransform.rect.yMin, rectTransform.rect.yMax);
-            }
-
-            var cellMinInView = scrollRect.viewport.InverseTransformPoint(rectTransform.TransformPoint(cellRect.min));
-            var cellMaxInView = scrollRect.viewport.InverseTransformPoint(rectTransform.TransformPoint(cellRect.max));
-
-            Vector2 offset = Vector2.zero;
-            var viewRect = scrollRect.viewport.rect;
-            if (cellMinInView[axis] < viewRect.min[axis])
-            {
-                offset[axis] = viewRect.min[axis] - cellMinInView[axis];
-            }
-            else if (cellMaxInView[axis] > viewRect.max[axis])
-            {
-                offset[axis] = viewRect.max[axis] - cellMaxInView[axis];
-            }
-            rectTransform.anchoredPosition += offset;
+            var cellPos = m_CellInfoMap[index].pos;
+            var cellSize = m_CellInfoMap[index].size;
+            cellPos.y = -cellPos.y - cellSize.y; // y grows downwards vertically.
+            cellRect = new Rect(cellPos, cellSize);
         }
+
+        return cellRect;
     }
 
     protected void UpdateChildren()

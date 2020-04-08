@@ -34,21 +34,6 @@ public class VerticalLayoutGroupCycle : HorizontalOrVerticalLayoutGroupCycle
         }
     }
 
-    [ContextMenu("Reset Position")]
-    public override void ResetPosition()
-    {
-        if (scrollRect != null)
-        {
-            scrollRect.StopMovement();
-            scrollRect.verticalNormalizedPosition = reversed ? 0.0f : 1.0f;
-        }
-    }
-
-    public override void Locate(uint index, bool includeSpacing = true)
-    {
-        LocateAlongAxis(1, index, includeSpacing);
-    }
-
     public override void CalculateLayoutInputHorizontal()
     {
         base.CalculateLayoutInputHorizontal();

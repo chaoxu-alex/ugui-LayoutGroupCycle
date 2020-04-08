@@ -33,21 +33,6 @@ public class HorizontalLayoutGroupCycle : HorizontalOrVerticalLayoutGroupCycle
         }
     }
 
-    [ContextMenu("Reset Position")]
-    public override void ResetPosition()
-    {
-        if (scrollRect != null)
-        {
-            scrollRect.StopMovement();
-            scrollRect.horizontalNormalizedPosition = reversed ? 1.0f : 0.0f;
-        }
-    }
-
-    public override void Locate(uint index, bool includeSpacing = true)
-    {
-        LocateAlongAxis(0, index, includeSpacing);
-    }
-
     /// <summary>
     /// Called by the layout system. Also see ILayoutElement
     /// </summary>

@@ -98,74 +98,22 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
             }
         }
 
-        //SetDirty();
+        // force layout rebuilt immediate instead of SetDirty() to ensure cells get updated this frame.
         LayoutRebuilder.ForceRebuildLayoutImmediate(rectTransform);
     }
 
-    [ContextMenu("Reset Position")]
-    public void ResetPosition()
+    public Rect? GetCellRect(uint index)
     {
-        if (scrollRect != null)
-        {
-            int cornerX = (int)startCorner % 2;
-            int cornerY = (int)startCorner / 2;
+        Rect? cellRect = null;
 
-            scrollRect.StopMovement();
-
-            if (scrollRect.horizontal)
-            {
-                scrollRect.horizontalNormalizedPosition = cornerX == 0 ? 0.0f : 1.0f;
-            }
-            else if (scrollRect.vertical)
-            {
-                scrollRect.verticalNormalizedPosition = cornerY == 1 ? 0.0f : 1.0f;
-            }
-        }
-    }
-
-    public void Locate(uint index, bool includeSpacing = true)
-    {
-        if (scrollRect.horizontal)
-        {
-            LocateAlongAxis(0, index, includeSpacing);
-        }
-        else if (scrollRect.vertical)
-        {
-            LocateAlongAxis(1, index, includeSpacing);
-        }
-    }
-
-    protected void LocateAlongAxis(int axis, uint index, bool includeSpacing)
-    {
         if (m_CellPosMap != null && index < m_CellPosMap.Length)
         {
             var cellPos = m_CellPosMap[index];
             cellPos.y = -cellPos.y - cellSize.y; // y grows downwards vertically.
-            Rect cellRect = new Rect(cellPos, cellSize);
-            if (includeSpacing)
-            {
-                // clamp within rect size since spacing on edge cell may excced the boundary when padding is less that spacing.
-                cellRect.xMin = Mathf.Clamp(cellRect.xMin - spacing.x, rectTransform.rect.xMin, rectTransform.rect.xMax);
-                cellRect.xMax = Mathf.Clamp(cellRect.xMax + spacing.x, rectTransform.rect.xMin, rectTransform.rect.xMax);
-                cellRect.yMin = Mathf.Clamp(cellRect.yMin - spacing.y, rectTransform.rect.yMin, rectTransform.rect.yMax);
-                cellRect.yMax = Mathf.Clamp(cellRect.yMax + spacing.y, rectTransform.rect.yMin, rectTransform.rect.yMax);
-            }
-
-            var cellMinInView = scrollRect.viewport.InverseTransformPoint(rectTransform.TransformPoint(cellRect.min));
-            var cellMaxInView = scrollRect.viewport.InverseTransformPoint(rectTransform.TransformPoint(cellRect.max));
-
-            Vector2 offset = Vector2.zero;
-            var viewRect = scrollRect.viewport.rect;
-            if (cellMinInView[axis] < viewRect.min[axis])
-            {
-                offset[axis] = viewRect.min[axis] - cellMinInView[axis];
-            }
-            else if (cellMaxInView[axis] > viewRect.max[axis])
-            {
-                offset[axis] = viewRect.max[axis] - cellMaxInView[axis];
-            }
-            rectTransform.anchoredPosition += offset;
+            cellRect = new Rect(cellPos, cellSize);
         }
+
+        return cellRect;
     }
 
     public override void CalculateLayoutInputHorizontal()
