@@ -13,12 +13,23 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
     public class EndSnapEvent : UnityEvent { }
 
     [SerializeField]
-    protected ScrollRect m_ScrollRect;
-    public ScrollRect scrollRect { get { return m_ScrollRect; } set { m_ScrollRect = value; } }
-
-    [SerializeField]
     protected RectTransform m_TargetParent;
-    public RectTransform targetParent { get { return m_TargetParent; } set { m_TargetParent = value; } }
+    public RectTransform targetParent
+    {
+        get
+        {
+            if (m_TargetParent == null)
+            {
+                m_TargetParent = scrollRect.content;
+            }
+
+            return m_TargetParent;
+        }
+        set
+        {
+            m_TargetParent = value;
+        }
+    }
 
     [SerializeField]
     [Range(0f, 1f)]
@@ -66,25 +77,23 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
     private EndSnapEvent m_OnEndSnap = new EndSnapEvent();
     public EndSnapEvent onEndSnap { get { return m_OnEndSnap; } set { m_OnEndSnap = value; } }
 
-    private bool m_Dragging = false;
-    private Coroutine m_SnapCoroutine = null;
-
-    protected override void Awake()
+    protected ScrollRect m_ScrollRect;
+    public ScrollRect scrollRect
     {
-        if (scrollRect == null)
+        get
         {
-            scrollRect = GetComponent<ScrollRect>();
-        }
-
-        if (scrollRect != null)
-        {
-            scrollRect.onValueChanged.AddListener(OnScrolling);
-            if (targetParent == null)
+            if (m_ScrollRect == null)
             {
-                targetParent = scrollRect.content;
+                m_ScrollRect = GetComponent<ScrollRect>();
+                m_ScrollRect.onValueChanged.AddListener(OnScrolling);
             }
+
+            return m_ScrollRect;
         }
     }
+
+    private bool m_Dragging = false;
+    private Coroutine m_SnapCoroutine = null;
 
     public void OnInitializePotentialDrag(PointerEventData eventData)
     {
@@ -217,7 +226,11 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
             nPos[scrollAxis] = 1.0f - nPos[scrollAxis];
         }
 
-        StartCoroutine(ToggleAutoSnap());
+        if (gameObject.activeInHierarchy)
+        {
+            StartCoroutine(ToggleAutoSnap());
+        }
+
         scrollRect.normalizedPosition = nPos;
     }
 
@@ -288,7 +301,7 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
 
     protected void OnScrolling(Vector2 nPos)
     {
-        if (autoSnap && !m_Dragging && m_SnapCoroutine == null)
+        if (autoSnap && !m_Dragging && m_SnapCoroutine == null && gameObject.activeInHierarchy)
         {
             var scrollAxis = scrollRect.vertical ? 1 : 0;
             var normalizedPositionOnScrollAxis = scrollRect.normalizedPosition[scrollAxis];
@@ -303,18 +316,21 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
 
     public void SnapRelative(Vector2 offset, float? _smoothTime = null, Ease.TweenType? _tweenType = null)
     {
-        scrollRect.StopMovement();
-
-        StopSnap();
-
-        if (clampWithinContent)
+        if (gameObject.activeInHierarchy)
         {
-            offset = ClampSnapOffset(offset);
-        }
+            scrollRect.StopMovement();
 
-        var time = _smoothTime != null ? _smoothTime.Value : smoothTime;
-        var type = _tweenType != null ? _tweenType.Value : tweenType;
-        m_SnapCoroutine = StartCoroutine(SnapCoroutine(offset, time, type));
+            StopSnap();
+
+            if (clampWithinContent)
+            {
+                offset = ClampSnapOffset(offset);
+            }
+
+            var time = _smoothTime != null ? _smoothTime.Value : smoothTime;
+            var type = _tweenType != null ? _tweenType.Value : tweenType;
+            m_SnapCoroutine = StartCoroutine(SnapCoroutine(offset, time, type));
+        }
     }
 
     protected IEnumerator SnapCoroutine(Vector2 offset, float time, Ease.TweenType tweenType)
@@ -444,15 +460,15 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
         return offset;
     }
 
-//#if UNITY_EDITOR
-//    protected override void OnValidate()
-//    {
-//        base.OnValidate();
+    // #if UNITY_EDITOR
+    //     protected override void OnValidate()
+    //     {
+    //         base.OnValidate();
 
-//        if (autoSnap && gameObject.activeInHierarchy)
-//        {
-//            SnapRelative(GetSnapOffsetToNearestTarget());
-//        }
-//    }
-//#endif
+    //            if (autoSnap && gameObject.activeInHierarchy)
+    //            {
+    //                SnapRelative(GetSnapOffsetToNearestTarget());
+    //            }
+    //     }
+    // #endif
 }
