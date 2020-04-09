@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
@@ -65,27 +66,23 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
     private EndSnapEvent m_OnEndSnap = new EndSnapEvent();
     public EndSnapEvent onEndSnap { get { return m_OnEndSnap; } set { m_OnEndSnap = value; } }
 
-    private bool m_Snapping = false;
     private bool m_Dragging = false;
-    private Vector2 m_SnapSrc = Vector2.zero;
-    private Vector2 m_SnapDst = Vector2.zero;
-    private float m_SnapTime = 0.0f;
+    private Coroutine m_SnapCoroutine = null;
 
     protected override void Awake()
-    {
-        Setup();
-    }
-
-    private void Setup()
     {
         if (scrollRect == null)
         {
             scrollRect = GetComponent<ScrollRect>();
         }
 
-        if (targetParent == null && scrollRect != null)
+        if (scrollRect != null)
         {
-            targetParent = scrollRect.content;
+            scrollRect.onValueChanged.AddListener(OnScrolling);
+            if (targetParent == null)
+            {
+                targetParent = scrollRect.content;
+            }
         }
     }
 
@@ -94,11 +91,7 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
         if (!IsActive())
             return;
 
-        if (m_Snapping)
-        {
-            m_Snapping = false;
-            m_OnEndSnap.Invoke();
-        }
+        StopSnap();
 
         m_Dragging = true;
     }
@@ -136,7 +129,7 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
 
     public override bool IsActive()
     {
-        return base.IsActive() && m_ScrollRect != null;
+        return base.IsActive() && scrollRect != null;
     }
 
     [ContextMenu("Reset To Start")]
@@ -154,6 +147,9 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
     // reset position to begin or end (reversed)
     public void ResetPosition(bool reversed = false)
     {
+        scrollRect.StopMovement();
+        StopSnap();
+
         var nPos = Vector2.zero;
         var parent = targetParent ?? scrollRect.content;
         while (parent != null)
@@ -221,8 +217,23 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
             nPos[scrollAxis] = 1.0f - nPos[scrollAxis];
         }
 
+        StartCoroutine(ToggleAutoSnap());
         scrollRect.normalizedPosition = nPos;
-        m_SnapDst = scrollRect.content.anchoredPosition; // skip auto snap after reset.
+    }
+
+    // set the normailized position will trigger ScrollRect.onValueChange in LateUpdate of this frame,
+    // which will trigger AutoSnap but at that time, cells are not updated yet and not in correct position
+    // yet, so the final position will be incorrect. so we disable autoSnap first and revert it after
+    // scrolling stopped.
+    protected IEnumerator ToggleAutoSnap()
+    {
+        if (autoSnap)
+        {
+            autoSnap = false;
+            yield return null;
+            yield return null; // two frames required.
+            autoSnap = true;
+        }
     }
 
     // for LayoutGroupCycles that doesn't have all the children RectTransform on the fly.
@@ -275,9 +286,9 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
         return result;
     }
 
-    protected void AutoSnap()
+    protected void OnScrolling(Vector2 nPos)
     {
-        if (m_AutoSnap && !m_Snapping && !scrollRect.content.anchoredPosition.Equals(m_SnapDst))
+        if (autoSnap && !m_Dragging && m_SnapCoroutine == null)
         {
             var scrollAxis = scrollRect.vertical ? 1 : 0;
             var normalizedPositionOnScrollAxis = scrollRect.normalizedPosition[scrollAxis];
@@ -294,14 +305,44 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
     {
         scrollRect.StopMovement();
 
-        m_SnapSrc = scrollRect.content.anchoredPosition;
+        StopSnap();
+
         if (clampWithinContent)
         {
             offset = ClampSnapOffset(offset);
         }
-        m_SnapDst = m_SnapSrc + offset;
-        m_SnapTime = 0.0f;
-        m_Snapping = true;
+
+        m_SnapCoroutine = StartCoroutine(SnapCoroutine(offset, m_SmoothTime, tweenType));
+    }
+
+    protected IEnumerator SnapCoroutine(Vector2 offset, float time, Ease.TweenType tweenType)
+    {
+        float elapsed = 0.0f;
+        var scrollAxis = scrollRect.vertical ? 1 : 0;
+        var startPos = scrollRect.content.anchoredPosition;
+        var endPos = startPos + offset;
+
+        while (elapsed < time)
+        {
+            elapsed = Math.Min(elapsed + Time.unscaledDeltaTime, time);
+            var position = scrollRect.content.anchoredPosition;
+            position[scrollAxis] = Ease.Tween(m_TweenType, startPos[scrollAxis], endPos[scrollAxis], elapsed / time);
+            scrollRect.content.anchoredPosition = position;
+            yield return null;
+        }
+
+        scrollRect.content.anchoredPosition = endPos;
+        StopSnap();
+    }
+
+    protected void StopSnap()
+    {
+        if (m_SnapCoroutine != null)
+        {
+            StopCoroutine(m_SnapCoroutine);
+            m_SnapCoroutine = null;
+            m_OnEndSnap.Invoke(); // TODO: a parameter indicate whether snap is ended automatically or manually.
+        }
     }
 
     protected Vector2 ClampSnapOffset(Vector2 offset)
@@ -401,49 +442,15 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
         return offset;
     }
 
-    void ProcessSnap()
-    {
-        if (m_Snapping)
-        {
-            var scrollAxis = scrollRect.vertical ? 1 : 0;
-            m_SnapTime = Math.Min(m_SnapTime + Time.unscaledDeltaTime, m_SmoothTime);
+//#if UNITY_EDITOR
+//    protected override void OnValidate()
+//    {
+//        base.OnValidate();
 
-            var position = scrollRect.content.anchoredPosition;
-            position[scrollAxis] = Ease.Tween(m_TweenType, m_SnapSrc[scrollAxis], m_SnapDst[scrollAxis], m_SnapTime / m_SmoothTime);
-            scrollRect.content.anchoredPosition = position;
-
-            if (m_SnapTime >= m_SmoothTime)
-            {
-                m_Snapping = false;
-                m_OnEndSnap.Invoke();
-            }
-        }
-    }
-
-    void LateUpdate()
-    {
-        if (scrollRect == null)
-            return;
-
-        if (m_Dragging) // skip while dragging.
-            return;
-
-        AutoSnap();
-
-        ProcessSnap();
-    }
-
-#if UNITY_EDITOR
-    protected override void OnValidate()
-    {
-        base.OnValidate();
-
-        Setup();
-
-        if (m_AutoSnap)
-        {
-            SnapRelative(GetSnapOffsetToNearestTarget());
-        }
-    }
-#endif
+//        if (autoSnap && gameObject.activeInHierarchy)
+//        {
+//            SnapRelative(GetSnapOffsetToNearestTarget());
+//        }
+//    }
+//#endif
 }

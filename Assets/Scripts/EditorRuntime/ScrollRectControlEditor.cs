@@ -6,7 +6,7 @@ using UnityEngine.UI;
 [CustomEditor(typeof(ScrollRectControl), true)]
 public class ScrollRectControlEditor : Editor
 {
-    SerializedProperty m_ScrollRect;
+    // SerializedProperty m_ScrollRect;
     SerializedProperty m_TargetParent;
     SerializedProperty m_ViewSnapPivot;
     SerializedProperty m_ViewSnapOffset;
@@ -21,7 +21,7 @@ public class ScrollRectControlEditor : Editor
 
     protected virtual void OnEnable()
     {
-        m_ScrollRect = serializedObject.FindProperty("m_ScrollRect");
+        // m_ScrollRect = serializedObject.FindProperty("m_ScrollRect");
         m_TargetParent = serializedObject.FindProperty("m_TargetParent");
         m_ViewSnapPivot = serializedObject.FindProperty("m_ViewSnapPivot");
         m_ViewSnapOffset = serializedObject.FindProperty("m_ViewSnapOffset");
@@ -38,7 +38,7 @@ public class ScrollRectControlEditor : Editor
     public override void OnInspectorGUI()
     {
         serializedObject.Update();
-        EditorGUILayout.PropertyField(m_ScrollRect);
+        // EditorGUILayout.PropertyField(m_ScrollRect);
         EditorGUILayout.PropertyField(m_TargetParent);
         EditorGUILayout.PropertyField(m_ViewSnapPivot);
         EditorGUILayout.PropertyField(m_ViewSnapOffset);
