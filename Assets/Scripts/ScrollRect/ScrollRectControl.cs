@@ -301,7 +301,7 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
         }
     }
 
-    public void SnapRelative(Vector2 offset)
+    public void SnapRelative(Vector2 offset, float? _smoothTime = null, Ease.TweenType? _tweenType = null)
     {
         scrollRect.StopMovement();
 
@@ -312,7 +312,9 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
             offset = ClampSnapOffset(offset);
         }
 
-        m_SnapCoroutine = StartCoroutine(SnapCoroutine(offset, m_SmoothTime, tweenType));
+        var time = _smoothTime != null ? _smoothTime.Value : smoothTime;
+        var type = _tweenType != null ? _tweenType.Value : tweenType;
+        m_SnapCoroutine = StartCoroutine(SnapCoroutine(offset, time, type));
     }
 
     protected IEnumerator SnapCoroutine(Vector2 offset, float time, Ease.TweenType tweenType)
@@ -376,9 +378,9 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
         return offset;
     }
 
-    public void SnapTo(uint index)
+    public void SnapTo(uint index, float? _smoothTime = null, Ease.TweenType? _tweenType = null)
     {
-        SnapRelative(GetSnapOffsetByIndex(index));
+        SnapRelative(GetSnapOffsetByIndex(index), _smoothTime, _tweenType);
     }
 
     protected Vector2 GetSnapOffsetByIndex(uint index)
