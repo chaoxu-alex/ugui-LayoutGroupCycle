@@ -65,7 +65,7 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
     private EndSnapEvent m_OnEndSnap = new EndSnapEvent();
     public EndSnapEvent onEndSnap { get { return m_OnEndSnap; } set { m_OnEndSnap = value; } }
 
-    private bool m_Sanpping = false;
+    private bool m_Snapping = false;
     private bool m_Dragging = false;
     private Vector2 m_SnapSrc = Vector2.zero;
     private Vector2 m_SnapDst = Vector2.zero;
@@ -94,9 +94,9 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
         if (!IsActive())
             return;
 
-        if (m_Sanpping)
+        if (m_Snapping)
         {
-            m_Sanpping = false;
+            m_Snapping = false;
             m_OnEndSnap.Invoke();
         }
 
@@ -137,6 +137,92 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
     public override bool IsActive()
     {
         return base.IsActive() && m_ScrollRect != null;
+    }
+
+    [ContextMenu("Reset To Start")]
+    public void ResetToStart()
+    {
+        ResetPosition();
+    }
+
+    [ContextMenu("Reset To End")]
+    public void ResetToEnd()
+    {
+        ResetPosition(true);
+    }
+
+    // reset position to begin or end (reversed)
+    public void ResetPosition(bool reversed = false)
+    {
+        var nPos = Vector2.zero;
+        var parent = targetParent ?? scrollRect.content;
+        while (parent != null)
+        {
+            var gridLayoutGroup = parent.GetComponent<GridLayoutGroup>();
+            if (gridLayoutGroup != null)
+            {
+                // begin is defined by start corner
+                var corner = new Vector2Int((int)gridLayoutGroup.startCorner % 2, (int)gridLayoutGroup.startCorner / 2);
+
+                if (scrollRect.horizontal)
+                {
+                    nPos.x = corner.x == 0 ? 0.0f : 1.0f;
+                }
+                else if (scrollRect.vertical)
+                {
+                    nPos.y = corner.y == 1 ? 0.0f : 1.0f;
+                }
+                break;
+            }
+
+            var verticalLayoutGroup = parent.GetComponent<VerticalLayoutGroup>();
+            if (verticalLayoutGroup != null)
+            {
+                // vertical layout group grows from top to bottom which is the reverse of y-axis
+                if (scrollRect.vertical)
+                {
+                    nPos.y = 1.0f - nPos.y;
+                }
+                break;
+            }
+
+            var horizontalOrVerticalLayoutGroupCycle = parent.GetComponent<HorizontalOrVerticalLayoutGroupCycle>();
+            if (horizontalOrVerticalLayoutGroupCycle != null)
+            {
+                if (horizontalOrVerticalLayoutGroupCycle is HorizontalLayoutGroupCycle)
+                {
+                    if (scrollRect.horizontal && horizontalOrVerticalLayoutGroupCycle.reversed)
+                    {
+                        nPos.x = 1.0f - nPos.x;
+                    }
+                }
+                else
+                {
+                    // vertical layout group grows from top to bottom which is the reverse of y-axis
+                    if (scrollRect.vertical)
+                    {
+                        nPos.y = 1.0f - nPos.y;
+                        if (horizontalOrVerticalLayoutGroupCycle.reversed)
+                        {
+                            nPos.y = 1.0f - nPos.y;
+                        }
+                    }
+                }
+
+                break;
+            }
+
+            break;
+        }
+
+        var scrollAxis = scrollRect.vertical ? 1 : 0;
+        if (reversed)
+        {
+            nPos[scrollAxis] = 1.0f - nPos[scrollAxis];
+        }
+
+        scrollRect.normalizedPosition = nPos;
+        m_SnapDst = scrollRect.content.anchoredPosition; // skip auto snap after reset.
     }
 
     // for LayoutGroupCycles that doesn't have all the children RectTransform on the fly.
@@ -191,7 +277,7 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
 
     protected void AutoSnap()
     {
-        if (m_AutoSnap && !m_Sanpping && !scrollRect.content.anchoredPosition.Equals(m_SnapDst))
+        if (m_AutoSnap && !m_Snapping && !scrollRect.content.anchoredPosition.Equals(m_SnapDst))
         {
             var scrollAxis = scrollRect.vertical ? 1 : 0;
             var normalizedPositionOnScrollAxis = scrollRect.normalizedPosition[scrollAxis];
@@ -215,7 +301,7 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
         }
         m_SnapDst = m_SnapSrc + offset;
         m_SnapTime = 0.0f;
-        m_Sanpping = true;
+        m_Snapping = true;
     }
 
     protected Vector2 ClampSnapOffset(Vector2 offset)
@@ -317,7 +403,7 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
 
     void ProcessSnap()
     {
-        if (m_Sanpping)
+        if (m_Snapping)
         {
             var scrollAxis = scrollRect.vertical ? 1 : 0;
             m_SnapTime = Math.Min(m_SnapTime + Time.unscaledDeltaTime, m_SmoothTime);
@@ -328,7 +414,7 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
 
             if (m_SnapTime >= m_SmoothTime)
             {
-                m_Sanpping = false;
+                m_Snapping = false;
                 m_OnEndSnap.Invoke();
             }
         }
