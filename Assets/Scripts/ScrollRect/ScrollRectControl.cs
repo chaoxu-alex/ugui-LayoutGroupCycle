@@ -141,24 +141,30 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
         return base.IsActive() && scrollRect != null;
     }
 
-    [ContextMenu("Reset To Start")]
-    public void ResetToStart()
+    [ContextMenu("Snap To Start")]
+    public void SnapToStartImmediately()
     {
-        ResetPosition();
+        SnapToStart(0.0f);
     }
 
-    [ContextMenu("Reset To End")]
-    public void ResetToEnd()
+    public void SnapToStart(float? _smoothTime = null, Ease.TweenType? _tweenType = null)
     {
-        ResetPosition(true);
+        SnapToEdge(true, _smoothTime, _tweenType);
     }
 
-    // reset position to begin or end (reversed)
-    public void ResetPosition(bool reversed = false)
+    [ContextMenu("Snap To End")]
+    public void SnapToEndImmediately()
     {
-        scrollRect.StopMovement();
-        StopSnap();
+        SnapToEnd(0.0f);
+    }
 
+    public void SnapToEnd(float? _smoothTime = null, Ease.TweenType? _tweenType = null)
+    {
+        SnapToEdge(false, _smoothTime, _tweenType);
+    }
+
+    protected void SnapToEdge(bool start, float? _smoothTime, Ease.TweenType? _tweenType)
+    {
         var nPos = Vector2.zero;
         var parent = targetParent ?? scrollRect.content;
         while (parent != null)
@@ -220,33 +226,16 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
             break;
         }
 
+
         var scrollAxis = scrollRect.vertical ? 1 : 0;
-        if (reversed)
+        if (!start)
         {
             nPos[scrollAxis] = 1.0f - nPos[scrollAxis];
         }
 
-        if (gameObject.activeInHierarchy)
-        {
-            StartCoroutine(ToggleAutoSnap());
-        }
-
-        scrollRect.normalizedPosition = nPos;
-    }
-
-    // set the normailized position will trigger ScrollRect.onValueChange in LateUpdate of this frame,
-    // which will trigger AutoSnap but at that time, cells are not updated yet and not in correct position
-    // yet, so the final position will be incorrect. so we disable autoSnap first and revert it after
-    // scrolling stopped.
-    protected IEnumerator ToggleAutoSnap()
-    {
-        if (autoSnap)
-        {
-            autoSnap = false;
-            yield return null;
-            yield return null; // two frames required.
-            autoSnap = true;
-        }
+        var snapViewPos = GetRelativePosition(scrollRect.content, scrollRect.viewport, nPos[scrollAxis], 0);
+        var snapEdgePos = GetRelativePosition(scrollRect.content, scrollRect.content, nPos[scrollAxis], 0);
+        SnapRelative(snapViewPos - snapEdgePos, _smoothTime, _tweenType);
     }
 
     // for LayoutGroupCycles that doesn't have all the children RectTransform on the fly.
@@ -329,7 +318,23 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
 
             var time = _smoothTime != null ? _smoothTime.Value : smoothTime;
             var type = _tweenType != null ? _tweenType.Value : tweenType;
+            StartCoroutine(ToggleAutoSnap());
             m_SnapCoroutine = StartCoroutine(SnapCoroutine(offset, time, type));
+        }
+    }
+
+    // snap position will trigger ScrollRect.onValueChange in LateUpdate of this frame, which will
+    // trigger AutoSnap right away, cells's position may not get updated this moment, the final snap
+    // pos will be incorrect. so here autoSnap will be disabled first and recovered later after two
+    // frames. (one frame delay doesn't make this right)
+    protected IEnumerator ToggleAutoSnap()
+    {
+        if (autoSnap)
+        {
+            autoSnap = false;
+            yield return null;
+            yield return null; // two frames required.
+            autoSnap = true;
         }
     }
 
