@@ -13,6 +13,15 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
     public class EndSnapEvent : UnityEvent { }
 
     [SerializeField]
+    private EndSnapEvent m_OnEndSnap = new EndSnapEvent();
+    public EndSnapEvent onEndSnap { get { return m_OnEndSnap; } set { m_OnEndSnap = value; } }
+
+    public class ScrollDragEvent : UnityEvent<PointerEventData> { }
+    public ScrollDragEvent onDragEnd = new ScrollDragEvent();
+    public ScrollDragEvent onDrag = new ScrollDragEvent();
+    public ScrollDragEvent onDragBegin = new ScrollDragEvent();
+
+    [SerializeField]
     protected RectTransform m_TargetParent;
     public RectTransform targetParent
     {
@@ -56,8 +65,12 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
     public float smoothTime { get { return m_SmoothTime; } set { m_SmoothTime = value; } }
 
     [SerializeField]
-    protected Ease.TweenType m_TweenType = Ease.TweenType.Linear;
-    public Ease.TweenType tweenType { get { return m_TweenType; } set { m_TweenType = value; } }
+    protected Ease.Type m_EaseType = Ease.Type.Linear;
+    public Ease.Type easeType { get { return m_EaseType; } set { m_EaseType = value; } }
+
+    [SerializeField]
+    protected AnimationCurve m_EaseCurve = new AnimationCurve(new Keyframe(0, 0), new Keyframe(1, 1));
+    public AnimationCurve easeCurve { get { return m_EaseCurve; } set { m_EaseCurve = value; } }
 
     [SerializeField]
     protected bool m_ClampWithinContent = true;
@@ -69,13 +82,10 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
     public bool autoSnap { get { return m_AutoSnap; } set { m_AutoSnap = value; } }
 
     [SerializeField]
-    [Tooltip("ScrollRect speed underwhich which snap will cut in.")]
-    protected float m_CutInSpeed = 500.0f;
-    public float cutInSpeed { get { return m_CutInSpeed; } set { m_CutInSpeed = value; } }
-
-    [SerializeField]
-    private EndSnapEvent m_OnEndSnap = new EndSnapEvent();
-    public EndSnapEvent onEndSnap { get { return m_OnEndSnap; } set { m_OnEndSnap = value; } }
+    [Range(0.0f, 1.0f)]
+    [Tooltip("Prediction time for calculate the inertial offset")]
+    protected float m_InertialPredictTime = 0.2f;
+    public float inertialPredictTime { get { return m_InertialPredictTime; } set { m_InertialPredictTime = value; } }
 
     protected ScrollRect m_ScrollRect;
     public ScrollRect scrollRect
@@ -113,19 +123,22 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
         if (!IsActive())
             return;
 
+        onDragBegin.Invoke(eventData);
         m_Dragging = true;
     }
 
     public void OnDrag(PointerEventData eventData)
     {
-        // if (!m_Dragging)
-        //     return;
+        if (!m_Dragging)
+            return;
 
-        // if (eventData.button != PointerEventData.InputButton.Left)
-        //     return;
+        if (eventData.button != PointerEventData.InputButton.Left)
+            return;
 
-        // if (!IsActive())
-        //     return;
+        if (!IsActive())
+            return;
+
+        onDrag.Invoke(eventData);
     }
 
     public void OnEndDrag(PointerEventData eventData)
@@ -133,6 +146,7 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
         if (eventData.button != PointerEventData.InputButton.Left)
             return;
 
+        onDragEnd.Invoke(eventData);
         m_Dragging = false;
     }
 
@@ -141,29 +155,29 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
         return base.IsActive() && scrollRect != null;
     }
 
-    [ContextMenu("Snap To Start")]
-    public void SnapToStartImmediately()
+    [ContextMenu("Reset To Start")]
+    public void ResetToStart()
     {
         SnapToStart(0.0f);
     }
 
-    public void SnapToStart(float? _smoothTime = null, Ease.TweenType? _tweenType = null)
+    public void SnapToStart(float? _smoothTime = null, Ease.Type? _easeType = null)
     {
-        SnapToEdge(true, _smoothTime, _tweenType);
+        SnapToEdge(true, _smoothTime, _easeType);
     }
 
-    [ContextMenu("Snap To End")]
-    public void SnapToEndImmediately()
+    [ContextMenu("Reset To End")]
+    public void ResetToEnd()
     {
         SnapToEnd(0.0f);
     }
 
-    public void SnapToEnd(float? _smoothTime = null, Ease.TweenType? _tweenType = null)
+    public void SnapToEnd(float? _smoothTime = null, Ease.Type? _easeType = null)
     {
-        SnapToEdge(false, _smoothTime, _tweenType);
+        SnapToEdge(false, _smoothTime, _easeType);
     }
 
-    protected void SnapToEdge(bool start, float? _smoothTime, Ease.TweenType? _tweenType)
+    protected void SnapToEdge(bool start, float? _smoothTime, Ease.Type? _easeType)
     {
         var nPos = Vector2.zero;
         var parent = targetParent ?? scrollRect.content;
@@ -235,7 +249,7 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
 
         var snapViewPos = GetRelativePosition(scrollRect.content, scrollRect.viewport, nPos[scrollAxis], 0);
         var snapEdgePos = GetRelativePosition(scrollRect.content, scrollRect.content, nPos[scrollAxis], 0);
-        SnapRelative(snapViewPos - snapEdgePos, _smoothTime, _tweenType);
+        SnapRelative(snapViewPos - snapEdgePos, _smoothTime, _easeType);
     }
 
     // for LayoutGroupCycles that doesn't have all the children RectTransform on the fly.
@@ -255,9 +269,14 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
     }
 
     // get snap offset of the nearest target under targetParent/scrollRect.content
-    protected Vector2 GetSnapOffsetToNearestTarget()
+    protected Vector2 GetSnapOffsetToNearestTarget(Vector2 inertiaOffset)
     {
         Vector2 result = Vector2.zero;
+
+        // cache the original position of content
+        var originalPos = scrollRect.content.anchoredPosition;
+        // translate content by inertial offset since the calculation below should be based on predicted result with inertial offset
+        scrollRect.content.anchoredPosition = scrollRect.content.anchoredPosition + inertiaOffset;
 
         Vector2 viewSnapPos = GetRelativePosition(scrollRect.content, scrollRect.viewport, viewSnapPivot, viewSnapOffset);
         var minDistance = float.MaxValue;
@@ -285,7 +304,11 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
             result[scrollAxis] = viewSnapPos[scrollAxis] - targetSnapPos[scrollAxis];
         }
 
-        return result;
+        // reset content to cached original position as inertial offset is just a prediction.
+        scrollRect.content.anchoredPosition = originalPos;
+
+        // add inertial offset to final result as the process above ignores it when calculating the snap offset
+        return result + inertiaOffset;
     }
 
     protected void OnScrolling(Vector2 nPos)
@@ -294,16 +317,22 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
         {
             var scrollAxis = scrollRect.vertical ? 1 : 0;
             var normalizedPositionOnScrollAxis = scrollRect.normalizedPosition[scrollAxis];
-            var isNotElasticProcessing = scrollRect.movementType != ScrollRect.MovementType.Elastic || 0.0f <= normalizedPositionOnScrollAxis && normalizedPositionOnScrollAxis <= 1.0f;
-            // // skip elasticity process; skip inertia process until speed drops down to the threshold
-            if (isNotElasticProcessing && Mathf.Abs(scrollRect.velocity[scrollAxis]) < m_CutInSpeed)
+            var isElasticProcessing = scrollRect.movementType == ScrollRect.MovementType.Elastic && !(-0.001f < normalizedPositionOnScrollAxis && normalizedPositionOnScrollAxis < 1.001f);
+            if (!isElasticProcessing)
             {
-                SnapRelative(GetSnapOffsetToNearestTarget());
+                var inertiaOffset = Vector2.zero;
+                if (Mathf.Abs(scrollRect.velocity[scrollAxis]) > 0 && scrollRect.inertia && scrollRect.decelerationRate > 0.0f)
+                {
+                    var velocity = scrollRect.velocity * Mathf.Pow(scrollRect.decelerationRate, m_InertialPredictTime);
+                    inertiaOffset[scrollAxis] = (scrollRect.velocity[scrollAxis] + velocity[scrollAxis]) / 2 * m_InertialPredictTime;
+                    scrollRect.StopMovement();
+                }
+                SnapRelative(GetSnapOffsetToNearestTarget(inertiaOffset));
             }
         }
     }
 
-    public void SnapRelative(Vector2 offset, float? _smoothTime = null, Ease.TweenType? _tweenType = null)
+    public void SnapRelative(Vector2 offset, float? _smoothTime = null, Ease.Type? _easeType = null)
     {
         if (gameObject.activeInHierarchy)
         {
@@ -317,8 +346,9 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
             }
 
             var time = _smoothTime != null ? _smoothTime.Value : smoothTime;
-            var type = _tweenType != null ? _tweenType.Value : tweenType;
+            var type = _easeType != null ? _easeType.Value : easeType;
             StartCoroutine(ToggleAutoSnap());
+
             m_SnapCoroutine = StartCoroutine(SnapCoroutine(offset, time, type));
         }
     }
@@ -338,7 +368,7 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
         }
     }
 
-    protected IEnumerator SnapCoroutine(Vector2 offset, float time, Ease.TweenType tweenType)
+    protected IEnumerator SnapCoroutine(Vector2 offset, float time, Ease.Type easeType)
     {
         float elapsed = 0.0f;
         var scrollAxis = scrollRect.vertical ? 1 : 0;
@@ -348,8 +378,16 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
         while (elapsed < time)
         {
             elapsed = Math.Min(elapsed + Time.unscaledDeltaTime, time);
+            var progress = elapsed / time;
             var position = scrollRect.content.anchoredPosition;
-            position[scrollAxis] = Ease.Tween(m_TweenType, startPos[scrollAxis], endPos[scrollAxis], elapsed / time);
+            if (m_EaseType == Ease.Type.Custom)
+            {
+                position[scrollAxis] = Mathf.Lerp(startPos[scrollAxis], endPos[scrollAxis], m_EaseCurve != null ? m_EaseCurve.Evaluate(progress) : progress);
+            }
+            else
+            {
+                position[scrollAxis] = Ease.Evaluate(m_EaseType, startPos[scrollAxis], endPos[scrollAxis], progress);
+            }
             scrollRect.content.anchoredPosition = position;
             yield return null;
         }
@@ -399,9 +437,9 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
         return offset;
     }
 
-    public void SnapTo(uint index, float? _smoothTime = null, Ease.TweenType? _tweenType = null)
+    public void SnapTo(uint index, float? _smoothTime = null, Ease.Type? _easeType = null)
     {
-        SnapRelative(GetSnapOffsetByIndex(index), _smoothTime, _tweenType);
+        SnapRelative(GetSnapOffsetByIndex(index), _smoothTime, _easeType);
     }
 
     protected Vector2 GetSnapOffsetByIndex(uint index)

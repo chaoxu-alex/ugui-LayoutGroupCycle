@@ -3,12 +3,12 @@ using UnityEngine;
 
 public static class Ease
 {
-    static private Func<float, float, float, float>[] m_TweenFuncMap = null;
+    static private Func<float, float, float, float>[] m_FuncMap = null;
     /// <summary>
     /// The easing type
     /// </summary>
     [Serializable]
-    public enum TweenType
+    public enum Type
     {
         Instant,
         Linear,
@@ -42,50 +42,51 @@ public static class Ease
         EaseInOutBack,
         EaseInElastic,
         EaseOutElastic,
-        EaseInOutElastic
+        EaseInOutElastic,
+        Custom
     }
 
-    public static float Tween(TweenType tweenType, float start, float end, float progress)
+    public static float Evaluate(Type type, float start, float end, float progress)
     {
-        if (m_TweenFuncMap == null)
+        if (m_FuncMap == null)
         {
-            m_TweenFuncMap = new Func<float, float, float, float>[(int)TweenType.EaseInOutElastic + 1];
-            m_TweenFuncMap[(int)TweenType.Instant] = Instant;
-            m_TweenFuncMap[(int)TweenType.Linear] = Linear;
-            m_TweenFuncMap[(int)TweenType.Spring] = Spring;
-            m_TweenFuncMap[(int)TweenType.EaseInQuad] = EaseInQuad;
-            m_TweenFuncMap[(int)TweenType.EaseOutQuad] = EaseOutQuad;
-            m_TweenFuncMap[(int)TweenType.EaseInOutQuad] = EaseInOutQuad;
-            m_TweenFuncMap[(int)TweenType.EaseInCubic] = EaseInCubic;
-            m_TweenFuncMap[(int)TweenType.EaseOutCubic] = EaseOutCubic;
-            m_TweenFuncMap[(int)TweenType.EaseInOutCubic] = EaseInOutCubic;
-            m_TweenFuncMap[(int)TweenType.EaseInQuart] = EaseInQuart;
-            m_TweenFuncMap[(int)TweenType.EaseOutQuart] = EaseOutQuart;
-            m_TweenFuncMap[(int)TweenType.EaseInOutQuart] = EaseInOutQuart;
-            m_TweenFuncMap[(int)TweenType.EaseInQuint] = EaseInQuint;
-            m_TweenFuncMap[(int)TweenType.EaseOutQuint] = EaseOutQuint;
-            m_TweenFuncMap[(int)TweenType.EaseInOutQuint] = EaseInOutQuint;
-            m_TweenFuncMap[(int)TweenType.EaseInSine] = EaseInSine;
-            m_TweenFuncMap[(int)TweenType.EaseOutSine] = EaseOutSine;
-            m_TweenFuncMap[(int)TweenType.EaseInOutSine] = EaseInOutSine;
-            m_TweenFuncMap[(int)TweenType.EaseInExpo] = EaseInExpo;
-            m_TweenFuncMap[(int)TweenType.EaseOutExpo] = EaseOutExpo;
-            m_TweenFuncMap[(int)TweenType.EaseInOutExpo] = EaseInOutExpo;
-            m_TweenFuncMap[(int)TweenType.EaseInCirc] = EaseInCirc;
-            m_TweenFuncMap[(int)TweenType.EaseOutCirc] = EaseOutCirc;
-            m_TweenFuncMap[(int)TweenType.EaseInOutCirc] = EaseInOutCirc;
-            m_TweenFuncMap[(int)TweenType.EaseInBounce] = EaseInBounce;
-            m_TweenFuncMap[(int)TweenType.EaseOutBounce] = EaseOutBounce;
-            m_TweenFuncMap[(int)TweenType.EaseInOutBounce] = EaseInOutBounce;
-            m_TweenFuncMap[(int)TweenType.EaseInBack] = EaseInBack;
-            m_TweenFuncMap[(int)TweenType.EaseOutBack] = EaseOutBack;
-            m_TweenFuncMap[(int)TweenType.EaseInOutBack] = EaseInOutBack;
-            m_TweenFuncMap[(int)TweenType.EaseInElastic] = EaseInElastic;
-            m_TweenFuncMap[(int)TweenType.EaseOutElastic] = EaseOutElastic;
-            m_TweenFuncMap[(int)TweenType.EaseInOutElastic] = EaseInOutElastic;
+            m_FuncMap = new Func<float, float, float, float>[(int)Type.Custom];
+            m_FuncMap[(int)Type.Instant] = Instant;
+            m_FuncMap[(int)Type.Linear] = Linear;
+            m_FuncMap[(int)Type.Spring] = Spring;
+            m_FuncMap[(int)Type.EaseInQuad] = EaseInQuad;
+            m_FuncMap[(int)Type.EaseOutQuad] = EaseOutQuad;
+            m_FuncMap[(int)Type.EaseInOutQuad] = EaseInOutQuad;
+            m_FuncMap[(int)Type.EaseInCubic] = EaseInCubic;
+            m_FuncMap[(int)Type.EaseOutCubic] = EaseOutCubic;
+            m_FuncMap[(int)Type.EaseInOutCubic] = EaseInOutCubic;
+            m_FuncMap[(int)Type.EaseInQuart] = EaseInQuart;
+            m_FuncMap[(int)Type.EaseOutQuart] = EaseOutQuart;
+            m_FuncMap[(int)Type.EaseInOutQuart] = EaseInOutQuart;
+            m_FuncMap[(int)Type.EaseInQuint] = EaseInQuint;
+            m_FuncMap[(int)Type.EaseOutQuint] = EaseOutQuint;
+            m_FuncMap[(int)Type.EaseInOutQuint] = EaseInOutQuint;
+            m_FuncMap[(int)Type.EaseInSine] = EaseInSine;
+            m_FuncMap[(int)Type.EaseOutSine] = EaseOutSine;
+            m_FuncMap[(int)Type.EaseInOutSine] = EaseInOutSine;
+            m_FuncMap[(int)Type.EaseInExpo] = EaseInExpo;
+            m_FuncMap[(int)Type.EaseOutExpo] = EaseOutExpo;
+            m_FuncMap[(int)Type.EaseInOutExpo] = EaseInOutExpo;
+            m_FuncMap[(int)Type.EaseInCirc] = EaseInCirc;
+            m_FuncMap[(int)Type.EaseOutCirc] = EaseOutCirc;
+            m_FuncMap[(int)Type.EaseInOutCirc] = EaseInOutCirc;
+            m_FuncMap[(int)Type.EaseInBounce] = EaseInBounce;
+            m_FuncMap[(int)Type.EaseOutBounce] = EaseOutBounce;
+            m_FuncMap[(int)Type.EaseInOutBounce] = EaseInOutBounce;
+            m_FuncMap[(int)Type.EaseInBack] = EaseInBack;
+            m_FuncMap[(int)Type.EaseOutBack] = EaseOutBack;
+            m_FuncMap[(int)Type.EaseInOutBack] = EaseInOutBack;
+            m_FuncMap[(int)Type.EaseInElastic] = EaseInElastic;
+            m_FuncMap[(int)Type.EaseOutElastic] = EaseOutElastic;
+            m_FuncMap[(int)Type.EaseInOutElastic] = EaseInOutElastic;
         }
 
-        return m_TweenFuncMap[(int)tweenType](start, end, progress);
+        return m_FuncMap[(int)type](start, end, progress);
     }
 
     private static float Instant(float start, float end, float val)

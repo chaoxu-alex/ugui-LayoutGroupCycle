@@ -401,7 +401,7 @@ public class GridLayoutGroupCycle : GridLayoutGroup, ILayoutGroupCycle
                         m_PendingActiveList.Add(child.gameObject);
                     }
                 }
-                else
+                else if (m_ChildIndexMap[childIndex] < 0 || m_ChildIndexMap[childIndex] >= this.size)
                 {
                     if (child.gameObject.activeSelf)
                     {

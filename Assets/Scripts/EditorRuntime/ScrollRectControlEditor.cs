@@ -12,10 +12,11 @@ public class ScrollRectControlEditor : Editor
     SerializedProperty m_TargetSnapPivot;
     SerializedProperty m_TargetSnapOffset;
     SerializedProperty m_SmoothTime;
-    SerializedProperty m_TweenType;
+    SerializedProperty m_EaseType;
+    SerializedProperty m_EaseCurve;
     SerializedProperty m_ClampWithinContent;
     SerializedProperty m_AutoSnap;
-    SerializedProperty m_CutInSpeed;
+    SerializedProperty m_InertialPredictTime;
     SerializedProperty m_OnEndSnap;
 
     protected virtual void OnEnable()
@@ -26,10 +27,11 @@ public class ScrollRectControlEditor : Editor
         m_TargetSnapPivot = serializedObject.FindProperty("m_TargetSnapPivot");
         m_TargetSnapOffset = serializedObject.FindProperty("m_TargetSnapOffset");
         m_SmoothTime = serializedObject.FindProperty("m_SmoothTime");
-        m_TweenType = serializedObject.FindProperty("m_TweenType");
+        m_EaseType = serializedObject.FindProperty("m_EaseType");
+        m_EaseCurve = serializedObject.FindProperty("m_EaseCurve");
         m_ClampWithinContent = serializedObject.FindProperty("m_ClampWithinContent");
         m_AutoSnap = serializedObject.FindProperty("m_AutoSnap");
-        m_CutInSpeed = serializedObject.FindProperty("m_CutInSpeed");
+        m_InertialPredictTime = serializedObject.FindProperty("m_InertialPredictTime");
         m_OnEndSnap = serializedObject.FindProperty("m_OnEndSnap");
     }
 
@@ -42,13 +44,17 @@ public class ScrollRectControlEditor : Editor
         EditorGUILayout.PropertyField(m_TargetSnapPivot);
         EditorGUILayout.PropertyField(m_TargetSnapOffset);
         EditorGUILayout.PropertyField(m_SmoothTime);
-        EditorGUILayout.PropertyField(m_TweenType);
+        EditorGUILayout.PropertyField(m_EaseType);
+        if (m_EaseType.enumValueIndex == (int)Ease.Type.Custom)
+        {
+            EditorGUILayout.PropertyField(m_EaseCurve);
+        }
         EditorGUILayout.PropertyField(m_ClampWithinContent);
         EditorGUILayout.PropertyField(m_AutoSnap);
         if (m_AutoSnap.boolValue)
         {
             EditorGUI.indentLevel++;
-            EditorGUILayout.PropertyField(m_CutInSpeed);
+            EditorGUILayout.PropertyField(m_InertialPredictTime);
             EditorGUI.indentLevel--;
         }
         EditorGUILayout.PropertyField(m_OnEndSnap);

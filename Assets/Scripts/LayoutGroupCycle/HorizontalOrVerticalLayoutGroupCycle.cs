@@ -392,7 +392,7 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
                             m_PendingActiveList.Add(child.gameObject);
                         }
                     }
-                    else
+                    else if (m_ChildIndexMap[childIndex] < 0 || m_ChildIndexMap[childIndex] >= this.size)
                     {
                         if (child.gameObject.activeSelf)
                         {
@@ -460,4 +460,15 @@ public abstract class HorizontalOrVerticalLayoutGroupCycle : HorizontalOrVertica
             m_PendingPopulateList.Clear();
         }
     }
+
+#if UNITY_EDITOR
+    protected override void OnValidate()
+    {
+        base.OnValidate();
+        if (!Application.isPlaying)
+        {
+            Populate();
+        }
+    }
+#endif
 }
