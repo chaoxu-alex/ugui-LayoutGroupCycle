@@ -10,7 +10,7 @@ using UnityEngine.UI;
 public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     [Serializable]
-    public class EndSnapEvent : UnityEvent { }
+    public class EndSnapEvent : UnityEvent<Transform> { }
 
     [SerializeField]
     private EndSnapEvent m_OnEndSnap = new EndSnapEvent();
@@ -311,6 +311,31 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
         return result + inertiaOffset;
     }
 
+    protected Transform GetSnappedTarget()
+    {
+        Transform result = null;
+        Vector2 viewSnapPos = GetRelativePosition(scrollRect.content, scrollRect.viewport, viewSnapPivot, viewSnapOffset);
+        var minDistance = float.MaxValue;
+        var scrollAxis = scrollRect.vertical ? 1 : 0;
+        foreach (RectTransform target in targetParent ?? scrollRect.content)
+        {
+            if (target.gameObject.activeSelf)
+            {
+                var targetSnapPos = GetRelativePosition(scrollRect.content, target, targetSnapPivot, targetSnapOffset);
+
+                var offset = viewSnapPos[scrollAxis] - targetSnapPos[scrollAxis];
+                var distance = Mathf.Abs(offset);
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    result = target;
+                }
+            }
+        }
+
+        return result;
+    }
+
     protected void OnScrolling(Vector2 nPos)
     {
         if (autoSnap && !m_Dragging && m_SnapCoroutine == null && gameObject.activeInHierarchy)
@@ -394,6 +419,8 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
 
         scrollRect.content.anchoredPosition = endPos;
         StopSnap();
+
+        m_OnEndSnap.Invoke(GetSnappedTarget());
     }
 
     protected void StopSnap()
@@ -402,7 +429,6 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
         {
             StopCoroutine(m_SnapCoroutine);
             m_SnapCoroutine = null;
-            m_OnEndSnap.Invoke(); // TODO: a parameter indicate whether snap is ended automatically or manually.
         }
     }
 
