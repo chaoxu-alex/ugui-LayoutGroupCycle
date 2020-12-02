@@ -148,6 +148,8 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
 
         onDragEnd.Invoke(eventData);
         m_Dragging = false;
+
+        TryAutoSnap();
     }
 
     public override bool IsActive()
@@ -337,6 +339,11 @@ public class ScrollRectControl : UIBehaviour, IInitializePotentialDragHandler, I
     }
 
     protected void OnScrolling(Vector2 nPos)
+    {
+        TryAutoSnap();
+    }
+
+    protected void TryAutoSnap()
     {
         if (autoSnap && !m_Dragging && m_SnapCoroutine == null && gameObject.activeInHierarchy)
         {
